@@ -262,7 +262,6 @@ def submit_personality_assessment(user, answers):
         "score": total,
         "learning_level": level
     }
-
 def get_recommendation(student_id: int):
 
     report = StudentReport.objects.get(
@@ -275,16 +274,13 @@ def get_recommendation(student_id: int):
     if not final_data:
         return {
             "status": "not_ready",
-            "message": "Complete skill test to get recommendation"
+            "message": "Complete skill test first"
         }
 
     return {
         "status": "ready",
-        "star_rating": final_data.get("star_rating"),
-        "strengths": final_data.get("strengths"),
-        "weaknesses": final_data.get("weaknesses"),
-        "recommended_tags": final_data.get("recommended_tags"),
-        "stage": summary.get("stage"),
+        "recommendation": final_data,
         "personality_score": report.personality_score,
-        "skill_score": report.skill_test_score
+        "skill_score": report.skill_test_score,
+        "stage": summary.get("stage")
     }

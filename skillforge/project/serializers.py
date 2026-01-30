@@ -40,4 +40,4 @@ class ApplicantSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = StudentProfile
-        fields = ['id', 'name', 'email', 'education', 'skills', 'experience_level', 'github_url', 'linkedin_url']
+        fields = ['id', 'name', 'email', 'education', 'skills', 'experience_level', 'github_url']
