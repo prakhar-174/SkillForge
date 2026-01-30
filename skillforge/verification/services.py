@@ -6,7 +6,7 @@ from .models import *
 from .utils.pdf_utils import extract_text_from_pdf_fileobj
 from .utils.git_utils import fetch_github_profile
 from .utils.langchain_utils import *
-from time import timezone
+from django.utils import timezone
 User = get_user_model()
 logger = logging.getLogger(__name__)
 
@@ -249,4 +249,30 @@ def submit_personality_assessment(user, answers):
     return {
         "score": total,
         "learning_level": level
+    }
+
+def get_recommendation(student_id: int):
+
+    report = StudentReport.objects.get(
+        student__user_id=student_id
+    )
+
+    summary = report.report_summary or {}
+    final_data = summary.get("final")
+
+    if not final_data:
+        return {
+            "status": "not_ready",
+            "message": "Complete skill test to get recommendation"
+        }
+
+    return {
+        "status": "ready",
+        "star_rating": final_data.get("star_rating"),
+        "strengths": final_data.get("strengths"),
+        "weaknesses": final_data.get("weaknesses"),
+        "recommended_tags": final_data.get("recommended_tags"),
+        "stage": summary.get("stage"),
+        "personality_score": report.personality_score,
+        "skill_score": report.skill_test_score
     }

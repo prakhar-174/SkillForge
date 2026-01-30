@@ -6,6 +6,8 @@ urlpatterns = [
     path("submit-test/", SubmitSkillTestAPI.as_view()),
     path("personality/questions/", PersonalityQuestionsAPI.as_view()),
     path("personality/submit/", SubmitPersonalityAPI.as_view()),
+    path("recommendation/", RecommendationAPI.as_view()),
+
 
 
 ]

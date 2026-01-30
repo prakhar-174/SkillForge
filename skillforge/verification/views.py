@@ -65,3 +65,9 @@ class SubmitPersonalityAPI(APIView):
             request.data.get("answers", {})
         )
         return Response(result)
+class RecommendationAPI(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        data = get_recommendation(request.user.id)
+        return Response(data)
