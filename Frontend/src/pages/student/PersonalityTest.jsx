@@ -20,7 +20,7 @@ const PersonalityTest = () => {
                 });
                 if (response.ok) {
                     const data = await response.json();
-                    setQuestions(data); // Assuming array of {id, text, options?}
+                    setQuestions(data);
                 }
             } catch (error) {
                 console.error("Failed to load questions", error);
@@ -32,7 +32,7 @@ const PersonalityTest = () => {
     }, [tokens]);
 
     const handleOptionSelect = (qId, value) => {
-        setAnswers(prev => ({ ...prev, [qId]: value }));
+        setAnswers(prev => ({ ...prev, [qId]: value })); // Sending 1-5 score, using ID as key
     };
 
     const handleSubmit = async () => {
@@ -72,7 +72,7 @@ const PersonalityTest = () => {
             <div className="max-w-4xl mx-auto space-y-8">
                 {questions.map((q, idx) => (
                     <motion.div
-                        key={idx}
+                        key={q.id || idx}
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: idx * 0.1 }}
@@ -80,22 +80,24 @@ const PersonalityTest = () => {
                     >
                         <h3 className="text-xl font-bold mb-6">{q.text}</h3>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            {/* Assuming options are part of the question or standard Likert. 
-                                Adjusting based on common API patterns or manual options if API returns raw text.
-                                If API doesn't send options, we default to Agree/Disagree scales. 
-                            */}
-                            {['Strongly Disagree', 'Disagree', 'Neutral', 'Agree', 'Strongly Agree'].map((opt, i) => (
-                                <button
-                                    key={i}
-                                    onClick={() => handleOptionSelect(q.id || idx, i + 1)} // sending 1-5 score
-                                    className={`p-4 rounded-xl border-2 font-bold transition-all text-left ${answers[q.id || idx] === (i + 1)
-                                            ? 'bg-purple-100 border-purple-500 text-purple-700'
-                                            : 'border-gray-200 hover:border-black'
-                                        }`}
-                                >
-                                    {opt}
-                                </button>
-                            ))}
+                            {/* Assuming options are standardized 1-5 scales if not provided */}
+                            {(q.options ? Object.entries(q.options) : ['Strongly Disagree', 'Disagree', 'Neutral', 'Agree', 'Strongly Agree']).map((opt, i) => {
+                                const val = i + 1; // Or value from dict if available
+                                const label = typeof opt === 'string' ? opt : opt[0]; // If entry is [key, value]
+
+                                return (
+                                    <button
+                                        key={i}
+                                        onClick={() => handleOptionSelect(q.id || idx + 1, diff_val(opt, i))}
+                                        className={`p-4 rounded-xl border-2 font-bold transition-all text-left ${(answers[q.id || idx + 1] === diff_val(opt, i))
+                                                ? 'bg-purple-100 border-purple-500 text-purple-700'
+                                                : 'border-gray-200 hover:border-black'
+                                            }`}
+                                    >
+                                        {get_label(opt)}
+                                    </button>
+                                )
+                            })}
                         </div>
                     </motion.div>
                 ))}
@@ -109,5 +111,15 @@ const PersonalityTest = () => {
         </div>
     );
 };
+
+// Helpers for mixed option types
+const diff_val = (opt, i) => {
+    // If opt is [key, value] tuple, return key. Else return i+1
+    return Array.isArray(opt) ? opt[0] : (i + 1);
+}
+const get_label = (opt) => {
+    return Array.isArray(opt) ? opt[0] : opt;
+}
+
 
 export default PersonalityTest;

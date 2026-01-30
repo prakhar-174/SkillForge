@@ -11,6 +11,7 @@ const StudentOnboarding = () => {
     const navigate = useNavigate();
     const [isLoading, setIsLoading] = useState(false);
 
+    // snake_case keys for backend compatibility
     const [formData, setFormData] = useState({
         full_name: '',
         bio: '',
@@ -22,9 +23,7 @@ const StudentOnboarding = () => {
     });
     const [resume, setResume] = useState(null);
 
-    // Pre-fill if data exists (e.g. from signup wizard local state or previous fetch)
     useEffect(() => {
-        // Fetch existing profile if updating
         const fetchProfile = async () => {
             if (!tokens?.access) return;
             try {
@@ -60,7 +59,6 @@ const StudentOnboarding = () => {
         e.preventDefault();
         setIsLoading(true);
 
-        // Usage of FormData for file upload
         const data = new FormData();
         Object.keys(formData).forEach(key => {
             data.append(key, formData[key]);
@@ -69,9 +67,11 @@ const StudentOnboarding = () => {
             data.append('resume', resume);
         }
 
-        const url = 'http://localhost:8000/api/accounts/onboarding/';
-        // Note: Onboarding is PUT. If we want PATCH for updates, we change method logic similar to Client
-        const method = 'PUT';
+        const isUpdate = user?.onboarding_stage && user.onboarding_stage >= 2;
+        const url = isUpdate
+            ? 'http://localhost:8000/api/accounts/profile/update/'
+            : 'http://localhost:8000/api/accounts/onboarding/';
+        const method = isUpdate ? 'PATCH' : 'PUT';
 
         try {
             const response = await fetch(url, {
@@ -83,15 +83,16 @@ const StudentOnboarding = () => {
             });
 
             if (response.ok) {
-                // Generate Partial Report is triggered by backend automatically
+                // Immediate redirect
                 navigate('/student/dashboard');
             } else {
                 const err = await response.json();
                 console.error("Onboarding failed", err);
-                alert("Failed to save profile. Please check fields.");
+                alert("Failed to save profile. " + JSON.stringify(err));
             }
         } catch (error) {
             console.error("Error submitting form", error);
+            alert("Network error.");
         } finally {
             setIsLoading(false);
         }
@@ -195,7 +196,7 @@ const StudentOnboarding = () => {
 
                         <div className="pt-6 flex justify-end">
                             <Button className="w-full md:w-auto px-12 py-4 text-lg flex items-center justify-center gap-2 shadow-[6px_6px_0px_0px_rgba(0,0,0,1)]">
-                                {isLoading ? 'Analyzing Profile...' : 'Create Student ID'}
+                                {isLoading ? 'Saving...' : 'Save & Continue'}
                                 {!isLoading && <ArrowRight />}
                             </Button>
                         </div>

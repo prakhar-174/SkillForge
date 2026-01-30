@@ -111,7 +111,17 @@ export const useAuthStore = create((set, get) => ({
         }
     },
 
-    logout: () => {
+    logout: async () => {
+        const { tokens } = get();
+        if (tokens?.refresh) {
+            try {
+                await fetch(`${API_URL}/logout/`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${tokens.access}` },
+                    body: JSON.stringify({ refresh: tokens.refresh }),
+                });
+            } catch (e) { console.error('Logout failed', e); }
+        }
         localStorage.removeItem('tokens');
         localStorage.removeItem('user');
         set({ isAuthenticated: false, user: null, tokens: null, role: null, step: 1 });

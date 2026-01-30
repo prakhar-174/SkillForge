@@ -1,11 +1,17 @@
 import React, { useEffect, useState, useRef } from 'react';
 import Webcam from 'react-webcam';
-import { AlertTriangle, Eye } from 'lucide-react';
+import { AlertTriangle, Eye, AlertOctagon } from 'lucide-react';
 
 const ProctorWrapper = ({ children, onDisqualify, onWarning }) => {
     const [warnings, setWarnings] = useState(0);
     const [isFullScreen, setIsFullScreen] = useState(true);
-    const containerRef = useRef(null);
+    const [isArmed, setIsArmed] = useState(false); // Grace period
+
+    // Arm the system after 3 seconds to allow initial render/popup handling
+    useEffect(() => {
+        const timer = setTimeout(() => setIsArmed(true), 3000);
+        return () => clearTimeout(timer);
+    }, []);
 
     // 1. Enforce Fullscreen
     const enterFullScreen = () => {
@@ -16,15 +22,10 @@ const ProctorWrapper = ({ children, onDisqualify, onWarning }) => {
     };
 
     useEffect(() => {
-        // Initial Fullscreen request
-        // Note: Browsers block programmatic fullscreen without user interaction. 
-        // We usually trigger this on a "Start" button click in the parent.
-
         const handleFullScreenChange = () => {
-            if (!document.fullscreenElement) {
+            if (!document.fullscreenElement && isArmed) {
                 setIsFullScreen(false);
-                setWarnings(prev => prev + 1);
-                onWarning("Exited Fullscreen");
+                triggerWarning("Exited Fullscreen");
             } else {
                 setIsFullScreen(true);
             }
@@ -32,26 +33,45 @@ const ProctorWrapper = ({ children, onDisqualify, onWarning }) => {
 
         document.addEventListener('fullscreenchange', handleFullScreenChange);
         return () => document.removeEventListener('fullscreenchange', handleFullScreenChange);
-    }, [onWarning]);
+    }, [isArmed]);
 
-    // 2. Tab Switching Detection
+    // 2. Tab Switching & Focus Loss Detection
+    // Using both visibilitychange (tabs) and blur (minimize/alt-tab)
     useEffect(() => {
-        let switchCount = 0;
         const handleVisibilityChange = () => {
-            if (document.hidden) {
-                switchCount++;
-                setWarnings(prev => prev + 1);
-                onWarning(`Tab switch detected! (${switchCount}/3)`);
+            if (document.hidden && isArmed) {
+                triggerWarning("Tab switch detected!");
+            }
+        };
 
-                if (switchCount >= 3) {
-                    onDisqualify("Excessive tab switching.");
-                }
+        const handleBlur = () => {
+            if (isArmed && document.activeElement !== document.body) {
+                // Focus lost to another app or browser chrome
+                // slightly less strict on blur to allow for legit browser interactions if needed, 
+                // but for strict test:
+                triggerWarning("Window focus lost (Alt-Tab/Minimize)!");
             }
         };
 
         document.addEventListener("visibilitychange", handleVisibilityChange);
-        return () => document.removeEventListener("visibilitychange", handleVisibilityChange);
-    }, [onDisqualify, onWarning]);
+        window.addEventListener("blur", handleBlur);
+
+        return () => {
+            document.removeEventListener("visibilitychange", handleVisibilityChange);
+            window.removeEventListener("blur", handleBlur);
+        };
+    }, [isArmed]);
+
+    const triggerWarning = (reason) => {
+        setWarnings(prev => {
+            const newCount = prev + 1;
+            onWarning?.(`${reason} (${newCount}/3)`);
+            if (newCount >= 3) {
+                onDisqualify?.("Security violation limit reached.");
+            }
+            return newCount;
+        });
+    };
 
     // 3. Disable Copy/Paste
     useEffect(() => {
@@ -72,9 +92,10 @@ const ProctorWrapper = ({ children, onDisqualify, onWarning }) => {
     if (warnings >= 3) {
         return (
             <div className="fixed inset-0 bg-red-900 text-white flex flex-col items-center justify-center z-[100]">
-                <AlertTriangle className="w-24 h-24 mb-4" />
+                <AlertOctagon className="w-24 h-24 mb-4" />
                 <h1 className="text-4xl font-black mb-2">DISQUALIFIED</h1>
-                <p className="text-xl">Security violations detected.</p>
+                <p className="text-xl">Multiple security violations detected.</p>
+                <button onClick={() => window.location.href = '/student/dashboard'} className="mt-8 bg-white text-red-900 px-6 py-2 rounded-full font-bold">Return to Dashboard</button>
             </div>
         );
     }
@@ -82,7 +103,7 @@ const ProctorWrapper = ({ children, onDisqualify, onWarning }) => {
     return (
         <div className="relative min-h-screen bg-gray-900 text-white select-none">
             {/* Webcam Overlay */}
-            <div className="fixed bottom-4 right-4 w-48 h-36 bg-black rounded-xl overflow-hidden shadow-2xl z-50 border-2 border-red-500">
+            <div className="fixed bottom-4 right-4 w-48 h-36 bg-black rounded-xl overflow-hidden shadow-2xl z-50 border-2 border-red-500 pointer-events-none">
                 <Webcam
                     audio={false}
                     className="w-full h-full object-cover"
@@ -99,10 +120,12 @@ const ProctorWrapper = ({ children, onDisqualify, onWarning }) => {
                 </div>
             )}
 
-            {!isFullScreen && (
-                <div className="fixed inset-0 bg-black/90 z-[60] flex flex-col items-center justify-center p-8 text-center">
+            {/* Fullscreen Re-entry blocker */}
+            {!isFullScreen && isArmed && (
+                <div className="fixed inset-0 bg-black/95 z-[60] flex flex-col items-center justify-center p-8 text-center backdrop-blur-sm">
+                    <AlertTriangle className="w-16 h-16 text-yellow-500 mb-4" />
                     <h2 className="text-2xl font-bold mb-4">Fullscreen Required</h2>
-                    <p className="mb-6">Please return to fullscreen to continue validation.</p>
+                    <p className="mb-6 max-w-md">You exited fullscreen mode. This is recorded as a violation. Please return immediately to continue.</p>
                     <button
                         onClick={enterFullScreen}
                         className="bg-white text-black px-6 py-3 rounded-full font-bold hover:scale-105 transition-transform"

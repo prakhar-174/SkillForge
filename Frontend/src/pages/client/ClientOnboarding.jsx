@@ -11,6 +11,7 @@ const ClientOnboarding = () => {
     const navigate = useNavigate();
     const [isLoading, setIsLoading] = useState(false);
 
+    // Using snake_case keys to match backend Serializer exactly
     const [profile, setProfile] = useState({
         company_name: '',
         industry: '',
@@ -49,11 +50,16 @@ const ClientOnboarding = () => {
         e.preventDefault();
         setIsLoading(true);
 
-        const url = user?.onboarding_stage && user.onboarding_stage >= 2
+        // Determine Mode: Onboarding (PUT) or Update (PATCH)
+        const isUpdate = user?.onboarding_stage && user.onboarding_stage >= 2;
+
+        const url = isUpdate
             ? 'http://localhost:8000/api/accounts/profile/update/'
             : 'http://localhost:8000/api/accounts/onboarding/';
 
-        const method = user?.onboarding_stage && user.onboarding_stage >= 2 ? 'PATCH' : 'PUT';
+        const method = isUpdate ? 'PATCH' : 'PUT';
+
+        console.log(`Submitting as ${method} to ${url}`, profile);
 
         try {
             const response = await fetch(url, {
@@ -66,9 +72,13 @@ const ClientOnboarding = () => {
             });
 
             if (response.ok) {
+                // If onboarding, maybe update local user state or re-fetch profile?
+                // For now, redirect to dashboard
                 navigate('/client/dashboard');
             } else {
-                console.error("Failed to update profile");
+                const err = await response.json();
+                console.error("Failed to update profile", err);
+                alert("Update failed. Check console for details.");
             }
         } catch (error) {
             console.error("Error submitting form", error);

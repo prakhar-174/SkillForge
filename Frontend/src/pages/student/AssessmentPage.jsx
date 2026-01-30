@@ -15,15 +15,12 @@ const AssessmentPage = () => {
     const [currentQuestion, setCurrentQuestion] = useState(0);
     const [answers, setAnswers] = useState({});
     const [sessionId, setSessionId] = useState(null);
-    const [timeLeft, setTimeLeft] = useState(1800);
-
-    const [disqualified, setDisqualified] = useState(false);
+    const [timeLeft, setTimeLeft] = useState(1800); // 30 mins
 
     useEffect(() => {
         const initExam = async () => {
             if (!tokens?.access) return;
             try {
-                // Generating a skill test for category 1 (Default/Web Dev)
                 const response = await fetch('http://localhost:8000/api/verification/generate-test/', {
                     method: 'POST',
                     headers: {
@@ -36,14 +33,11 @@ const AssessmentPage = () => {
                 if (response.ok) {
                     const data = await response.json();
                     setSessionId(data.attempt_id);
-                    // Assuming backend returns questions array
                     if (data.questions && data.questions.length > 0) {
                         setQuestions(data.questions);
                     } else {
-                        // Fallback/Mock if backend is empty/broken
-                        setQuestions([
-                            { id: 1, text: "Backend returned no questions. (Mock) Is React a library?", options: ["Yes", "No"], correct: "Yes" }
-                        ]);
+                        // Fallback handling
+                        console.warn("Backend returned 0 questions.");
                     }
                 } else {
                     console.error("Failed to generate test");
@@ -54,6 +48,28 @@ const AssessmentPage = () => {
         initExam();
     }, [tokens]);
 
+    // Timer Logic
+    useEffect(() => {
+        if (!examStarted || timeLeft <= 0) return;
+        const timer = setInterval(() => {
+            setTimeLeft(prev => {
+                if (prev <= 1) {
+                    clearInterval(timer);
+                    submitExam();
+                    return 0;
+                }
+                return prev - 1;
+            });
+        }, 1000);
+        return () => clearInterval(timer);
+    }, [examStarted, timeLeft]);
+
+    const formatTime = (secs) => {
+        const m = Math.floor(secs / 60);
+        const s = secs % 60;
+        return `${m}:${s < 10 ? '0' : ''}${s}`;
+    };
+
     const startTest = async () => {
         const elem = document.documentElement;
         if (elem.requestFullscreen) {
@@ -63,8 +79,8 @@ const AssessmentPage = () => {
     };
 
     const handleAnswer = (option) => {
-        const qId = questions[currentQuestion].id;
-        setAnswers(prev => ({ ...prev, [qId]: option }));
+        // Record answer for current question index/ID
+        setAnswers(prev => ({ ...prev, [currentQuestion]: option }));
     };
 
     const nextQuestion = () => {
@@ -76,8 +92,13 @@ const AssessmentPage = () => {
     };
 
     const submitExam = async () => {
+        // Transform answers map to ordered list
+        // answers might be {0: "A", 2: "C"}. Need ["A", null, "C"] or similar based on question count.
+        // Assuming user answers all or we fill gaps.
+        const answersList = questions.map((_, idx) => answers[idx] || null);
+
         try {
-            const response = await fetch('http://localhost:8000/api/verification/submit-test/', {
+            await fetch('http://localhost:8000/api/verification/submit-test/', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -85,10 +106,9 @@ const AssessmentPage = () => {
                 },
                 body: JSON.stringify({
                     attempt_id: sessionId,
-                    answers: answers
+                    answers: answersList
                 })
             });
-            // Regardless of result, go back to dashboard
             navigate('/student/dashboard');
         } catch (e) {
             console.error("Submit failed", e);
@@ -96,12 +116,9 @@ const AssessmentPage = () => {
         }
     };
 
-    const handleDisqualify = (reason) => {
-        setDisqualified(true);
-        // Force logout or just kick out
-        setTimeout(() => {
-            navigate('/student/dashboard');
-        }, 3000);
+    const handleDisqualify = () => {
+        // Submit what we have and exit
+        navigate('/student/dashboard');
     };
 
     if (loading) return <div className="text-white bg-black h-screen flex items-center justify-center">Loading Assessment...</div>;
@@ -115,7 +132,7 @@ const AssessmentPage = () => {
                     <ul className="list-disc pl-5 space-y-2 text-gray-400">
                         <li>Camera monitoring enabled.</li>
                         <li>Fullscreen mode enforced.</li>
-                        <li>Tab switching logs a violation (3 strikes = fail).</li>
+                        <li>Tab switching / Minimizing logs a violation (3 strikes = fail).</li>
                         <li>Copy/Paste functions disabled.</li>
                     </ul>
                 </div>
@@ -135,7 +152,7 @@ const AssessmentPage = () => {
                         Question {currentQuestion + 1} / {questions.length}
                     </div>
                     <div className="flex items-center gap-2 bg-gray-800 px-4 py-2 rounded-full font-mono text-orange-500">
-                        <Clock className="w-4 h-4" /> 29:45
+                        <Clock className="w-4 h-4" /> {formatTime(timeLeft)}
                     </div>
                 </div>
 
@@ -149,15 +166,16 @@ const AssessmentPage = () => {
                                 animate={{ opacity: 1, x: 0 }}
                                 className="text-3xl md:text-5xl font-bold mb-12 leading-tight"
                             >
-                                {questions[currentQuestion].text}
+                                {questions[currentQuestion].question || questions[currentQuestion].text}
                             </motion.h2>
 
                             <div className="grid grid-cols-1 gap-4">
-                                {questions[currentQuestion].options && questions[currentQuestion].options.map((option, idx) => (
+                                {/* Handling both 'options' array or dict formats depending on backend */}
+                                {(questions[currentQuestion].options || []).map((option, idx) => (
                                     <button
                                         key={idx}
                                         onClick={() => handleAnswer(option)}
-                                        className={`p-6 text-left rounded-2xl border-2 transition-all text-xl font-medium ${answers[questions[currentQuestion].id] === option
+                                        className={`p-6 text-left rounded-2xl border-2 transition-all text-xl font-medium ${answers[currentQuestion] === option
                                                 ? 'bg-orange-500 border-orange-500 text-black'
                                                 : 'border-gray-700 hover:border-white hover:bg-gray-800'
                                             }`}
@@ -168,6 +186,12 @@ const AssessmentPage = () => {
                                 ))}
                             </div>
                         </>
+                    )}
+
+                    {!questions.length && (
+                        <div className="text-center text-red-500">
+                            Error loading questions. Please contact support.
+                        </div>
                     )}
 
                     <div className="mt-12 flex justify-end">
