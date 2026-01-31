@@ -41,15 +41,81 @@ class ClientJobsAPI(APIView):
             return Response([], status=200)
 
 
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework import permissions
+
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.metrics.pairwise import cosine_similarity
+
+from .models import JobPost
+from .serializers import JobPostSerializer
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.metrics.pairwise import cosine_similarity
+
+
 class AllJobsAPI(APIView):
-    """Returns all open jobs for students to browse"""
     permission_classes = [permissions.IsAuthenticated]
 
     def get(self, request):
-        jobs = JobPost.objects.filter(status='open').order_by('-created_at')
-        serializer = JobPostSerializer(jobs, many=True)
-        return Response(serializer.data)
 
+        jobs = JobPost.objects.select_related("client")\
+                              .prefetch_related("applications")\
+                              .filter(status="open")\
+                              .order_by("-created_at")
+
+        # Non student → normal list
+        if request.user.role != "student":
+            serializer = JobPostSerializer(jobs, many=True)
+            return Response(serializer.data)
+
+        student = request.user.student_profile
+
+        profile_text = " ".join([
+            student.skills or "",
+            student.education or "",
+            student.experience_level or ""
+        ])
+
+        job_texts = [
+            f"{j.title} {j.description} {j.skills_required}"
+            for j in jobs
+        ]
+
+        vectorizer = TfidfVectorizer()
+        vectors = vectorizer.fit_transform([profile_text] + job_texts)
+
+        scores = cosine_similarity(
+            vectors[0:1],
+            vectors[1:]
+        ).flatten()
+
+        results = []
+
+        for job, score in zip(jobs, scores):
+
+            results.append({
+                # 🔥 EXACT SAME KEYS (unchanged)
+                "id": job.id,
+                "title": job.title,
+                "category": job.category,
+                "description": job.description,
+                "budget_type": job.budget_type,
+                "budget_amount": job.budget_amount,
+                "skills_required": job.skills_required,
+                "min_skill_score": job.min_skill_score,
+                "status": job.status,
+                "created_at": job.created_at,
+                "company_name": job.client.company_name if job.client else "",
+                "applicant_count": job.applications.count(),
+
+                # ✅ ONLY NEW FIELD
+                "match": round(score * 100, 2)
+            })
+
+        results.sort(key=lambda x: x["match"], reverse=True)
+
+        return Response(results)
 
 class ApplyJobAPI(APIView):
     """Allows a student to apply to a job"""
@@ -98,22 +164,75 @@ class MyApplicationsAPI(APIView):
         except StudentProfile.DoesNotExist:
             return Response([], status=200)
 
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.metrics.pairwise import cosine_similarity
+
 
 class JobApplicantsAPI(APIView):
-    """Returns all applicants for a specific job (for clients)"""
     permission_classes = [permissions.IsAuthenticated]
 
     def get(self, request, job_id):
-        if request.user.role != 'client':
+
+        if request.user.role != "client":
             return Response({"error": "Unauthorized"}, status=403)
 
         try:
-            client_profile = request.user.client_profile
-            job = JobPost.objects.get(id=job_id, client=client_profile)
-        except (ClientProfile.DoesNotExist, JobPost.DoesNotExist):
+            job = JobPost.objects.select_related("client")\
+                                 .prefetch_related("applications__student__user")\
+                                 .get(id=job_id, client=request.user.client_profile)
+        except JobPost.DoesNotExist:
             return Response({"error": "Job not found"}, status=404)
 
-        applications = job.applications.select_related('student__user').all()
-        applicants = [app.student for app in applications]
-        serializer = ApplicantSerializer(applicants, many=True)
-        return Response(serializer.data)
+        applications = job.applications.all()
+
+        if not applications:
+            return Response([])
+
+        job_text = f"{job.title} {job.description} {job.skills_required}"
+
+      
+        student_texts = []
+        students = []
+
+        for app in applications:
+            s = app.student
+            students.append(s)
+
+            text = " ".join([
+                s.skills or "",
+                s.education or "",
+                s.experience_level or ""
+            ])
+
+            student_texts.append(text)
+
+       
+        vectorizer = TfidfVectorizer()
+        vectors = vectorizer.fit_transform([job_text] + student_texts)
+
+        scores = cosine_similarity(
+            vectors[0:1],
+            vectors[1:]
+        ).flatten()
+
+        results = []
+
+        for student, score in zip(students, scores):
+
+            results.append({
+              
+                "id": student.id,
+                "name": student.full_name,
+                "email": student.user.email,
+                "education": student.education,
+                "skills": student.skills,
+                "experience_level": student.experience_level,
+                "github_url": student.github_url,
+
+             
+                "match": round(score * 100, 2)
+            })
+
+        results.sort(key=lambda x: x["match"], reverse=True)
+
+        return Response(results)
