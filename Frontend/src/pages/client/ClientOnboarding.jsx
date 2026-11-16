@@ -5,6 +5,7 @@ import { useAuthStore } from '../../store/authStore';
 import { Building, MapPin, Globe, Briefcase, ArrowRight } from 'lucide-react';
 import Button from '../../components/ui/Button';
 import Input from '../../components/ui/Input';
+import ThemeToggle from '../../components/layout/ThemeToggle';
 
 const ClientOnboarding = () => {
     const { user, tokens } = useAuthStore();
@@ -88,7 +89,10 @@ const ClientOnboarding = () => {
     };
 
     return (
-        <div className="min-h-screen bg-light-canvas dark:bg-dark-canvas p-6 flex items-center justify-center">
+        <div className="min-h-screen bg-light-canvas dark:bg-dark-canvas p-6 flex items-center justify-center relative">
+            <div className="absolute top-6 right-6 z-50">
+                <ThemeToggle />
+            </div>
             <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}

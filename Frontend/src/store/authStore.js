@@ -44,6 +44,12 @@ export const useAuthStore = create((set, get) => ({
     })),
 
     // API Actions
+    updateUser: (updated) => set((state) => {
+        const user = { ...state.user, ...updated };
+        localStorage.setItem('user', JSON.stringify(user));
+        return { user };
+    }),
+
     login: async (email, password) => {
         try {
             const response = await fetch(`${API_URL}/login/`, {
@@ -60,7 +66,7 @@ export const useAuthStore = create((set, get) => ({
             const data = await response.json();
 
             // Store data
-            const user = { email, role: data.role };
+            const user = { email, role: data.role, onboarding_stage: data.onboarding_stage };
             localStorage.setItem('tokens', JSON.stringify(data.tokens));
             localStorage.setItem('user', JSON.stringify(user));
 
@@ -80,8 +86,6 @@ export const useAuthStore = create((set, get) => ({
             email: formData.email,
             password: formData.password,
             role: role,
-            // Add other fields as needed by backend or separate onboarding call
-            // specific fields handled by Profile models in backend, might need separate flow or updated serializer
         };
 
         try {
@@ -97,13 +101,13 @@ export const useAuthStore = create((set, get) => ({
             }
 
             const data = await response.json();
-            const user = { email: formData.email, role: role };
+            const user = { email: formData.email, role: role, onboarding_stage: 0, name: formData.fullName };
 
             // Auto login after signup
             localStorage.setItem('tokens', JSON.stringify(data.tokens));
             localStorage.setItem('user', JSON.stringify(user));
 
-            set({ isAuthenticated: true, user, tokens: data.tokens });
+            set({ isAuthenticated: true, user, tokens: data.tokens, role });
             return user;
         } catch (error) {
             console.error('Signup error:', error);

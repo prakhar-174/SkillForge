@@ -228,6 +228,7 @@ class JobApplicantsAPI(APIView):
                 "skills": student.skills,
                 "experience_level": student.experience_level,
                 "github_url": student.github_url,
+                "linkedin_url": student.linkedin_url,
 
              
                 "match": round(score * 100, 2)

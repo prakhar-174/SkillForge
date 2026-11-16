@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuthStore } from '../../store/authStore';
 import ThemeToggle from '../../components/layout/ThemeToggle';
-import { LogOut, BookOpen, Target, Award, Play, ChevronRight, Briefcase, User, Star, X, MapPin, DollarSign, Send, CheckCircle } from 'lucide-react';
+import { LogOut, BookOpen, Target, Award, Play, ChevronRight, Briefcase, User, Star, X, MapPin, DollarSign, Send, CheckCircle, Github, Linkedin, ExternalLink } from 'lucide-react';
 import Button from '../../components/ui/Button';
 import { useNavigate } from 'react-router-dom';
 
@@ -127,7 +127,7 @@ const StudentDashboard = () => {
             <header className="flex items-center justify-between mb-12">
                 <div>
                     <h1 className="text-4xl md:text-5xl font-black mb-2 tracking-tighter">
-                        Hello, {user?.name?.split(" ")[0]}! 👋
+                        Hello, {(profile?.full_name || user?.name || 'Candidate').split(" ")[0]}! 👋
                     </h1>
                     <p className="font-script text-xl text-gray-500 dark:text-gray-400">
                         Ready to forge your path today?
@@ -150,15 +150,29 @@ const StudentDashboard = () => {
                 <div className="lg:col-span-2 space-y-8">
                     {/* Profile Card */}
                     <div className="bg-white dark:bg-dark-card border-2 border-black dark:border-gray-700 rounded-[3rem] p-8 shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] dark:shadow-none relative">
-                        <div className="flex justify-between items-start mb-4">
-                            <h3 className="text-2xl font-black flex items-center gap-2"><User className="fill-current" /> My Identification</h3>
-                            <Button onClick={() => navigate('/student/onboarding')} variant="secondary" className="!text-xs !py-1">Update ID</Button>
+                        <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-3 mb-6 pb-4 border-b border-gray-100 dark:border-gray-800">
+                            <div className="flex items-center gap-3">
+                                <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-orange-400 to-amber-500 flex items-center justify-center text-white font-black text-xl shadow-md flex-shrink-0">
+                                    {profile?.full_name ? profile.full_name.charAt(0).toUpperCase() : <User className="w-6 h-6" />}
+                                </div>
+                                <div>
+                                    <h3 className="text-2xl md:text-3xl font-black tracking-tight text-black dark:text-white">
+                                        {profile?.full_name || 'My Profile'}
+                                    </h3>
+                                    <p className="text-xs font-bold text-gray-400">
+                                        {profile?.email || user?.email}
+                                    </p>
+                                </div>
+                            </div>
+                            <Button onClick={() => navigate('/student/onboarding')} variant="secondary" className="!text-xs !py-1.5 !px-4 self-start sm:self-auto">
+                                Update Profile
+                            </Button>
                         </div>
                         {profile ? (
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div>
                                     <label className="text-xs font-bold text-gray-400 uppercase">Education</label>
-                                    <p className="font-bold text-lg">{profile.education}</p>
+                                    <p className="font-bold text-lg">{profile.education || 'Not specified'}</p>
                                 </div>
                                 <div>
                                     <label className="text-xs font-bold text-gray-400 uppercase">Role</label>
@@ -166,7 +180,55 @@ const StudentDashboard = () => {
                                 </div>
                                 <div className="md:col-span-2">
                                     <label className="text-xs font-bold text-gray-400 uppercase">Bio</label>
-                                    <p className="font-medium text-gray-600 dark:text-gray-300">{profile.bio}</p>
+                                    <p className="font-medium text-gray-600 dark:text-gray-300">{profile.bio || 'No bio added yet.'}</p>
+                                </div>
+                                {profile.skills && (
+                                    <div className="md:col-span-2">
+                                        <label className="text-xs font-bold text-gray-400 uppercase">Skills</label>
+                                        <div className="flex flex-wrap gap-1.5 mt-1">
+                                            {profile.skills.split(',').map((skill, i) => (
+                                                <span key={i} className="text-xs font-bold px-2.5 py-1 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300">
+                                                    {skill.trim()}
+                                                </span>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+                                {/* Social / Profile Links */}
+                                <div className="md:col-span-2 pt-3 border-t border-gray-100 dark:border-gray-800 flex flex-wrap items-center gap-3">
+                                    {profile.github_url ? (
+                                        <a
+                                            href={profile.github_url}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-bold bg-neutral-100 hover:bg-neutral-200 dark:bg-neutral-800 dark:hover:bg-neutral-700 text-neutral-800 dark:text-neutral-200 transition-colors border border-neutral-300 dark:border-neutral-700"
+                                        >
+                                            <Github className="w-4 h-4 text-black dark:text-white" />
+                                            <span>GitHub</span>
+                                            <ExternalLink className="w-3 h-3 opacity-60" />
+                                        </a>
+                                    ) : (
+                                        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium text-gray-400 bg-gray-50 dark:bg-gray-800/50 border border-dashed border-gray-200 dark:border-gray-700">
+                                            <Github className="w-3.5 h-3.5" /> No GitHub linked
+                                        </span>
+                                    )}
+
+                                    {profile.linkedin_url ? (
+                                        <a
+                                            href={profile.linkedin_url}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-bold bg-blue-50 hover:bg-blue-100 dark:bg-blue-950/40 dark:hover:bg-blue-900/40 text-blue-600 dark:text-blue-400 transition-colors border border-blue-200 dark:border-blue-800"
+                                        >
+                                            <Linkedin className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                                            <span>LinkedIn</span>
+                                            <ExternalLink className="w-3 h-3 opacity-60" />
+                                        </a>
+                                    ) : (
+                                        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium text-gray-400 bg-gray-50 dark:bg-gray-800/50 border border-dashed border-gray-200 dark:border-gray-700">
+                                            <Linkedin className="w-3.5 h-3.5" /> No LinkedIn linked
+                                        </span>
+                                    )}
                                 </div>
                             </div>
                         ) : (

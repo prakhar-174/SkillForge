@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { useThemeStore } from './store/themeStore';
 import LandingPage from './pages/LandingPage';
 import AuthPage from './pages/AuthPage';
 import StudentDashboard from './pages/dashboard/StudentDashboard';
@@ -11,6 +12,16 @@ import PersonalityTest from './pages/student/PersonalityTest';
 import UpskillPage from './pages/student/UpskillPage';
 
 function App() {
+  const { theme } = useThemeStore();
+
+  useEffect(() => {
+    if (theme === 'dark') {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+  }, [theme]);
+
   return (
     <BrowserRouter>
       <Routes>

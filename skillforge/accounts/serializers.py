@@ -1,5 +1,6 @@
 from rest_framework import serializers
 from django.contrib.auth import authenticate
+import PyPDF2
 from .models import User, StudentProfile, ClientProfile
 
 
@@ -43,6 +44,7 @@ class StudentOnboardingSerializer(serializers.ModelSerializer):
             "education",
             "experience_level",
             "github_url",
+            "linkedin_url",
             "portfolio_links",
             "skills",
             "resume",
@@ -53,6 +55,27 @@ class StudentOnboardingSerializer(serializers.ModelSerializer):
             "skills": {"required": True},
             "education": {"required": True},
         }
+
+    def validate_resume(self, value):
+        if value:
+            filename = getattr(value, "name", "").lower()
+            if not filename.endswith(".pdf"):
+                raise serializers.ValidationError("Only PDF files are allowed for resume.")
+            content_type = getattr(value, "content_type", "")
+            if content_type and content_type != "application/pdf":
+                raise serializers.ValidationError("Only PDF files are allowed for resume.")
+            try:
+                reader = PyPDF2.PdfReader(value)
+                if len(reader.pages) == 0:
+                    raise serializers.ValidationError("Uploaded PDF appears to be empty.")
+            except serializers.ValidationError:
+                raise
+            except Exception as e:
+                raise serializers.ValidationError(f"Invalid PDF file: {str(e)}")
+            finally:
+                if hasattr(value, "seek"):
+                    value.seek(0)
+        return value
 
 
 
@@ -86,11 +109,39 @@ class StudentProfileSerializer(serializers.ModelSerializer):
             "education",
             "experience_level",
             "github_url",
+            "linkedin_url",
             "portfolio_links",
             "skills",
             "resume",
             "rating",
         ]
+
+    def validate_full_name(self, value):
+        # Name is immutable once created/onboarded
+        if self.instance and self.instance.full_name:
+            return self.instance.full_name
+        return value
+
+    def validate_resume(self, value):
+        if value:
+            filename = getattr(value, "name", "").lower()
+            if not filename.endswith(".pdf"):
+                raise serializers.ValidationError("Only PDF files are allowed for resume.")
+            content_type = getattr(value, "content_type", "")
+            if content_type and content_type != "application/pdf":
+                raise serializers.ValidationError("Only PDF files are allowed for resume.")
+            try:
+                reader = PyPDF2.PdfReader(value)
+                if len(reader.pages) == 0:
+                    raise serializers.ValidationError("Uploaded PDF appears to be empty.")
+            except serializers.ValidationError:
+                raise
+            except Exception as e:
+                raise serializers.ValidationError(f"Invalid PDF file: {str(e)}")
+            finally:
+                if hasattr(value, "seek"):
+                    value.seek(0)
+        return value
 
 
 class ClientProfileSerializer(serializers.ModelSerializer):
