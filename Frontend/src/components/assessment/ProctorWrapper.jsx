@@ -181,62 +181,79 @@ const ProctorWrapper = ({ children, onDisqualify, onWarning }) => {
 
     if (warnings >= 3) {
         return (
-            <div className="fixed inset-0 bg-red-900 text-white flex flex-col items-center justify-center z-[100]">
-                <AlertOctagon className="w-24 h-24 mb-4" />
-                <h1 className="text-4xl font-black mb-2">DISQUALIFIED</h1>
-                <p className="text-xl">Multiple security violations detected.</p>
-                <button onClick={() => window.location.href = '/student/dashboard'} className="mt-8 bg-white text-red-900 px-6 py-2 rounded-full font-bold">Return to Dashboard</button>
+            <div className="fixed inset-0 bg-red-950/95 text-white flex flex-col items-center justify-center z-[100] p-6 text-center backdrop-blur-md">
+                <div className="max-w-md bg-black/80 border-2 border-red-500 rounded-3xl p-8 shadow-2xl flex flex-col items-center">
+                    <AlertOctagon className="w-20 h-20 text-red-500 mb-4 animate-pulse" />
+                    <h1 className="text-3xl md:text-4xl font-black mb-2 tracking-tight text-white">DISQUALIFIED</h1>
+                    <p className="text-gray-300 text-sm md:text-base mb-6">
+                        Multiple security violations were detected during this assessment session.
+                    </p>
+                    <button
+                        onClick={() => window.location.href = '/student/dashboard'}
+                        className="bg-white text-black px-8 py-3 rounded-full font-bold hover:bg-gray-100 transition-all hover:scale-105 active:scale-95 shadow-lg"
+                    >
+                        Return to Dashboard
+                    </button>
+                </div>
             </div>
         );
     }
 
     return (
-        <div className="relative min-h-screen bg-gray-900 text-white select-none">
+        <div className="relative min-h-screen bg-light-canvas dark:bg-dark-canvas text-light-border dark:text-white select-none transition-colors duration-300">
             {/* Webcam Overlay */}
-            <div className={`fixed bottom-4 right-4 w-48 h-36 bg-black rounded-xl overflow-hidden shadow-2xl z-50 border-2 ${noFaceWarning ? 'border-yellow-500 animate-pulse' : 'border-red-500'} pointer-events-none`}>
+            <div className={`fixed bottom-4 right-4 w-44 h-32 md:w-52 md:h-36 bg-black rounded-2xl overflow-hidden shadow-[4px_4px_0px_0px_rgba(0,0,0,0.5)] dark:shadow-none z-50 border-2 ${noFaceWarning ? 'border-amber-400 ring-2 ring-amber-400/50' : 'border-red-500'} pointer-events-none transition-all`}>
                 <Webcam
                     ref={webcamRef}
                     audio={false}
                     className="w-full h-full object-cover"
                     screenshotFormat="image/jpeg"
                 />
-                <div className="absolute top-2 left-2 flex items-center gap-1 bg-red-600 text-white text-[10px] font-bold px-2 py-0.5 rounded-full animate-pulse">
-                    <Eye className="w-3 h-3" /> REC
+                <div className="absolute top-2 left-2 flex items-center gap-1.5 bg-red-600/90 text-white text-[10px] font-black px-2.5 py-0.5 rounded-full shadow">
+                    <span className="w-2 h-2 rounded-full bg-white animate-ping" />
+                    REC
                 </div>
                 {/* No Face Warning Badge */}
                 {noFaceWarning && (
-                    <div className="absolute bottom-2 left-2 right-2 flex items-center justify-center gap-1 bg-yellow-500 text-black text-[10px] font-bold px-2 py-1 rounded-full">
-                        <UserX className="w-3 h-3" /> NO FACE DETECTED
+                    <div className="absolute bottom-2 left-2 right-2 flex items-center justify-center gap-1.5 bg-amber-400 text-black text-[10px] font-black px-2 py-1 rounded-full shadow">
+                        <UserX className="w-3.5 h-3.5" /> NO FACE DETECTED
                     </div>
                 )}
             </div>
 
-            {/* Warning Banner */}
-            {warnings > 0 && (
-                <div className="fixed top-0 left-0 right-0 bg-red-600 p-2 text-center font-bold text-sm animate-pulse z-50">
-                    WARNING: Security protocols breached! ({warnings}/3)
-                </div>
-            )}
+            {/* Floating Top Warnings (Non-Intrusive Pills) */}
+            <div className="fixed top-3 left-1/2 -translate-x-1/2 z-[70] flex flex-col items-center gap-2 pointer-events-none max-w-xl w-full px-4">
+                {warnings > 0 && (
+                    <div className="bg-red-600 text-white shadow-xl px-5 py-2 rounded-full border-2 border-red-800 text-xs md:text-sm font-black flex items-center gap-2 animate-bounce">
+                        <AlertTriangle className="w-4 h-4 flex-shrink-0" />
+                        <span>Security violation detected ({warnings}/3 strikes)</span>
+                    </div>
+                )}
 
-            {/* No Face Warning Banner */}
-            {noFaceWarning && warnings < 3 && (
-                <div className="fixed top-10 left-0 right-0 bg-yellow-500 text-black p-2 text-center font-bold text-sm z-50">
-                    ⚠️ No face detected! Please stay visible to the camera.
-                </div>
-            )}
+                {noFaceWarning && warnings < 3 && (
+                    <div className="bg-amber-400 text-black shadow-xl px-5 py-2 rounded-full border-2 border-black text-xs md:text-sm font-black flex items-center gap-2 animate-pulse">
+                        <UserX className="w-4 h-4 flex-shrink-0" />
+                        <span>Stay visible to the camera</span>
+                    </div>
+                )}
+            </div>
 
             {/* Fullscreen Re-entry blocker */}
             {!isFullScreen && isArmed && (
-                <div className="fixed inset-0 bg-black/95 z-[60] flex flex-col items-center justify-center p-8 text-center backdrop-blur-sm">
-                    <AlertTriangle className="w-16 h-16 text-yellow-500 mb-4" />
-                    <h2 className="text-2xl font-bold mb-4">Fullscreen Required</h2>
-                    <p className="mb-6 max-w-md">You exited fullscreen mode. This is recorded as a violation. Please return immediately to continue.</p>
-                    <button
-                        onClick={enterFullScreen}
-                        className="bg-white text-black px-6 py-3 rounded-full font-bold hover:scale-105 transition-transform"
-                    >
-                        Return to Test
-                    </button>
+                <div className="fixed inset-0 bg-black/90 z-[80] flex flex-col items-center justify-center p-8 text-center backdrop-blur-sm">
+                    <div className="max-w-md bg-stone-900 border-2 border-amber-400 rounded-3xl p-8 shadow-2xl flex flex-col items-center">
+                        <AlertTriangle className="w-16 h-16 text-amber-400 mb-4 animate-bounce" />
+                        <h2 className="text-2xl font-black mb-3 text-white">Fullscreen Required</h2>
+                        <p className="text-gray-300 text-sm mb-6">
+                            You exited fullscreen mode. This was recorded as a proctoring violation. Please return immediately to proceed with your assessment.
+                        </p>
+                        <button
+                            onClick={enterFullScreen}
+                            className="bg-amber-400 text-black px-8 py-3 rounded-full font-bold hover:bg-amber-300 transition-all hover:scale-105 active:scale-95 shadow-lg"
+                        >
+                            Return to Assessment
+                        </button>
+                    </div>
                 </div>
             )}
 

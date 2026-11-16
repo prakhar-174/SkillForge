@@ -98,6 +98,8 @@ from .models import StudentProfile, ClientProfile
 
 class StudentProfileSerializer(serializers.ModelSerializer):
     email = serializers.EmailField(source="user.email", read_only=True)
+    skill_score = serializers.SerializerMethodField()
+    personality_score = serializers.SerializerMethodField()
 
     class Meta:
         model = StudentProfile
@@ -114,7 +116,25 @@ class StudentProfileSerializer(serializers.ModelSerializer):
             "skills",
             "resume",
             "rating",
+            "streak",
+            "longest_streak",
+            "points",
+            "primary_domain",
+            "skill_score",
+            "personality_score",
         ]
+
+    def get_skill_score(self, obj):
+        try:
+            return round(obj.report.skill_test_score, 1)
+        except Exception:
+            return 0.0
+
+    def get_personality_score(self, obj):
+        try:
+            return round(obj.report.personality_score, 1)
+        except Exception:
+            return 0.0
 
     def validate_full_name(self, value):
         # Name is immutable once created/onboarded
