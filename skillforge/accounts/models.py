@@ -74,6 +74,12 @@ class StudentProfile(models.Model):
 
     rating = models.DecimalField(max_digits=2, decimal_places=1, default=0.0)
 
+    streak = models.IntegerField(default=1)
+    longest_streak = models.IntegerField(default=1)
+    last_active_date = models.DateField(null=True, blank=True)
+    points = models.IntegerField(default=0)
+    primary_domain = models.CharField(max_length=100, blank=True, default="Frontend Development")
+
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):

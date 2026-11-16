@@ -7,7 +7,5 @@ urlpatterns = [
     path("personality/questions/", PersonalityQuestionsAPI.as_view()),
     path("personality/submit/", SubmitPersonalityAPI.as_view()),
     path("recommendation/", RecommendationAPI.as_view()),
-
-
-
+    path("leaderboard/", LeaderboardAPI.as_view()),
 ]

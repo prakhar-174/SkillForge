@@ -2,7 +2,32 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuthStore } from '../../store/authStore';
 import ThemeToggle from '../../components/layout/ThemeToggle';
-import { LogOut, BookOpen, Target, Award, Play, ChevronRight, Briefcase, User, Star, X, MapPin, DollarSign, Send, CheckCircle, Github, Linkedin, ExternalLink } from 'lucide-react';
+import {
+    LogOut,
+    BookOpen,
+    Target,
+    Award,
+    Play,
+    ChevronRight,
+    Briefcase,
+    User,
+    Star,
+    X,
+    MapPin,
+    DollarSign,
+    Send,
+    CheckCircle,
+    Github,
+    Linkedin,
+    ExternalLink,
+    Flame,
+    Trophy,
+    Zap,
+    Crown,
+    Medal,
+    Sparkles,
+    Globe
+} from 'lucide-react';
 import Button from '../../components/ui/Button';
 import { useNavigate } from 'react-router-dom';
 
@@ -15,6 +40,12 @@ const StudentDashboard = () => {
     const [myApplications, setMyApplications] = useState([]);
     const [isJobModalOpen, setIsJobModalOpen] = useState(false);
     const [applyingTo, setApplyingTo] = useState(null);
+
+    // Leaderboard state
+    const [leaderboardCriteria, setLeaderboardCriteria] = useState('overall');
+    const [leaderboardDomain, setLeaderboardDomain] = useState('Frontend Development');
+    const [leaderboardData, setLeaderboardData] = useState({ rankings: [], my_stats: null, available_domains: [] });
+    const [leaderboardLoading, setLeaderboardLoading] = useState(false);
 
     useEffect(() => {
         if (user && user.onboarding_stage < 2) {
@@ -30,7 +61,13 @@ const StudentDashboard = () => {
                 const res = await fetch('http://localhost:8000/api/accounts/profile/', {
                     headers: { 'Authorization': `Bearer ${tokens.access}` }
                 });
-                if (res.ok) setProfile(await res.json());
+                if (res.ok) {
+                    const profData = await res.json();
+                    setProfile(profData);
+                    if (profData.primary_domain) {
+                        setLeaderboardDomain(profData.primary_domain);
+                    }
+                }
             } catch (e) { console.error(e); }
 
             // Fetch Recommendation
@@ -40,10 +77,8 @@ const StudentDashboard = () => {
                 });
                 if (res.ok) {
                     const data = await res.json();
-                    // Parse the nested recommendation JSON if it exists
                     if (data.status === 'ready' && data.recommendation) {
                         try {
-                            // recommendation might be a JSON string or already an object
                             const recData = typeof data.recommendation === 'string'
                                 ? JSON.parse(data.recommendation)
                                 : data.recommendation;
@@ -77,6 +112,30 @@ const StudentDashboard = () => {
         };
         fetchData();
     }, [tokens]);
+
+    // Fetch Leaderboard
+    const fetchLeaderboard = async (criteria = leaderboardCriteria, domain = leaderboardDomain) => {
+        if (!tokens?.access) return;
+        setLeaderboardLoading(true);
+        try {
+            const url = `http://localhost:8000/api/verification/leaderboard/?criteria=${criteria}&domain=${encodeURIComponent(domain)}`;
+            const res = await fetch(url, {
+                headers: { 'Authorization': `Bearer ${tokens.access}` }
+            });
+            if (res.ok) {
+                const data = await res.json();
+                setLeaderboardData(data);
+            }
+        } catch (e) {
+            console.error('Failed to fetch leaderboard:', e);
+        } finally {
+            setLeaderboardLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        fetchLeaderboard(leaderboardCriteria, leaderboardDomain);
+    }, [tokens, leaderboardCriteria, leaderboardDomain]);
 
     const fetchJobs = async () => {
         try {
@@ -124,16 +183,29 @@ const StudentDashboard = () => {
 
     return (
         <div className="min-h-screen bg-light-canvas dark:bg-dark-canvas transition-colors duration-500 p-6 md:p-12 font-sans text-light-border dark:text-white">
-            <header className="flex items-center justify-between mb-12">
+            <header className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-10">
                 <div>
-                    <h1 className="text-4xl md:text-5xl font-black mb-2 tracking-tighter">
-                        Hello, {(profile?.full_name || user?.name || 'Candidate').split(" ")[0]}! 👋
-                    </h1>
-                    <p className="font-script text-xl text-gray-500 dark:text-gray-400">
+                    <div className="flex flex-wrap items-center gap-3">
+                        <h1 className="text-4xl md:text-5xl font-black tracking-tighter">
+                            Hello, {(profile?.full_name || user?.name || 'Candidate').split(" ")[0]}! 👋
+                        </h1>
+                        {/* Dynamic Streak Badge */}
+                        <div className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-orange-100 dark:bg-orange-950/70 border-2 border-orange-500 text-orange-600 dark:text-orange-400 font-black text-xs shadow-sm hover:scale-105 transition-transform">
+                            <Flame className="w-4 h-4 fill-orange-500 text-orange-500 animate-pulse" />
+                            <span>{profile?.streak || 1} DAY STREAK</span>
+                        </div>
+                        {profile?.points != null && profile?.points > 0 && (
+                            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-purple-100 dark:bg-purple-950/60 border border-purple-300 dark:border-purple-800 text-purple-700 dark:text-purple-300 font-black text-xs shadow-sm">
+                                <Zap className="w-3.5 h-3.5 fill-purple-500 text-purple-500" />
+                                <span>{profile.points} XP</span>
+                            </div>
+                        )}
+                    </div>
+                    <p className="font-script text-xl text-gray-500 dark:text-gray-400 mt-1">
                         Ready to forge your path today?
                     </p>
                 </div>
-                <div className="flex items-center gap-4">
+                <div className="flex items-center gap-4 self-end sm:self-auto">
                     <ThemeToggle />
                     <Button
                         onClick={handleLogout}
@@ -281,25 +353,302 @@ const StudentDashboard = () => {
                         </div>
                     </div>
 
-                    {/* Stats Grid */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <motion.div whileHover={{ y: -5 }} className="bg-white dark:bg-dark-card border-2 border-black dark:border-gray-700 rounded-[2rem] p-6 shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] dark:shadow-none">
-                            <div className="flex items-center gap-3 mb-3">
-                                <div className="p-2 bg-blue-100 rounded-lg text-blue-600"><Target className="w-5 h-5" /></div>
-                                <h3 className="font-bold">Skill Score</h3>
+                    {/* Stats Grid - 4 Cards */}
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        {/* 1. Skill Score */}
+                        <motion.div whileHover={{ y: -4 }} className="bg-white dark:bg-dark-card border-2 border-black dark:border-gray-700 rounded-3xl p-5 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] dark:shadow-none">
+                            <div className="flex items-center gap-2 mb-2">
+                                <div className="p-1.5 bg-blue-100 dark:bg-blue-950/60 rounded-xl text-blue-600"><Target className="w-4 h-4" /></div>
+                                <h3 className="text-xs font-black uppercase text-gray-400">Skill Score</h3>
                             </div>
-                            <p className="text-4xl font-black">{recommendation?.skill_score || profile?.skill_score || 0}</p>
-                            <p className="text-sm text-gray-500 mt-1">Your verified score</p>
+                            <p className="text-2xl md:text-3xl font-black">
+                                {(() => {
+                                    const rawScore = recommendation?.skill_score ?? profile?.skill_score ?? 0;
+                                    const num = Number(rawScore);
+                                    if (!isNaN(num) && num > 0) {
+                                        return `${num.toFixed(0)}%`;
+                                    }
+                                    return '0%';
+                                })()}
+                            </p>
+                            <p className="text-[11px] text-gray-500 mt-1 font-medium">Verified prowess</p>
                         </motion.div>
 
-                        <motion.div whileHover={{ y: -5 }} className="bg-white dark:bg-dark-card border-2 border-black dark:border-gray-700 rounded-[2rem] p-6 shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] dark:shadow-none">
-                            <div className="flex items-center gap-3 mb-3">
-                                <div className="p-2 bg-green-100 rounded-lg text-green-600"><BookOpen className="w-5 h-5" /></div>
-                                <h3 className="font-bold">Applications</h3>
+                        {/* 2. Daily Streak */}
+                        <motion.div whileHover={{ y: -4 }} className="bg-white dark:bg-dark-card border-2 border-black dark:border-gray-700 rounded-3xl p-5 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] dark:shadow-none">
+                            <div className="flex items-center gap-2 mb-2">
+                                <div className="p-1.5 bg-orange-100 dark:bg-orange-950/60 rounded-xl text-orange-600"><Flame className="w-4 h-4 fill-orange-500" /></div>
+                                <h3 className="text-xs font-black uppercase text-gray-400">Daily Streak</h3>
                             </div>
-                            <p className="text-4xl font-black">{myApplications.length}</p>
-                            <p className="text-sm text-gray-500 mt-1">Jobs applied to</p>
+                            <p className="text-2xl md:text-3xl font-black text-orange-500">
+                                {profile?.streak || 1}d
+                            </p>
+                            <p className="text-[11px] text-gray-500 mt-1 font-medium">Active daily login</p>
                         </motion.div>
+
+                        {/* 3. Platform Points */}
+                        <motion.div whileHover={{ y: -4 }} className="bg-white dark:bg-dark-card border-2 border-black dark:border-gray-700 rounded-3xl p-5 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] dark:shadow-none">
+                            <div className="flex items-center gap-2 mb-2">
+                                <div className="p-1.5 bg-purple-100 dark:bg-purple-950/60 rounded-xl text-purple-600"><Zap className="w-4 h-4 fill-purple-500" /></div>
+                                <h3 className="text-xs font-black uppercase text-gray-400">Total XP</h3>
+                            </div>
+                            <p className="text-2xl md:text-3xl font-black text-purple-600 dark:text-purple-400">
+                                {profile?.points || 150}
+                            </p>
+                            <p className="text-[11px] text-gray-500 mt-1 font-medium">Test score & streak</p>
+                        </motion.div>
+
+                        {/* 4. Applications */}
+                        <motion.div whileHover={{ y: -4 }} className="bg-white dark:bg-dark-card border-2 border-black dark:border-gray-700 rounded-3xl p-5 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] dark:shadow-none">
+                            <div className="flex items-center gap-2 mb-2">
+                                <div className="p-1.5 bg-green-100 dark:bg-green-950/60 rounded-xl text-green-600"><BookOpen className="w-4 h-4" /></div>
+                                <h3 className="text-xs font-black uppercase text-gray-400">Applications</h3>
+                            </div>
+                            <p className="text-2xl md:text-3xl font-black">{myApplications.length}</p>
+                            <p className="text-[11px] text-gray-500 mt-1 font-medium">Jobs applied to</p>
+                        </motion.div>
+                    </div>
+
+                    {/* Leaderboard Section */}
+                    <div className="bg-white dark:bg-dark-card border-2 border-black dark:border-gray-700 rounded-[3rem] p-6 md:p-8 shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] dark:shadow-none">
+                        {/* Leaderboard Header */}
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 pb-4 border-b border-stone-100 dark:border-gray-800">
+                            <div className="flex items-center gap-3">
+                                <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center text-white shadow-md flex-shrink-0">
+                                    <Trophy className="w-6 h-6" />
+                                </div>
+                                <div>
+                                    <h3 className="text-xl md:text-2xl font-black tracking-tight text-light-border dark:text-white">
+                                        Platform Leaderboard
+                                    </h3>
+                                    <p className="text-xs text-stone-500 dark:text-gray-400 font-medium">
+                                        Rankings determined by test scores, daily streak, and evaluated XP.
+                                    </p>
+                                </div>
+                            </div>
+
+                            {/* Criteria Switcher (Overall vs Domain) */}
+                            <div className="flex items-center bg-stone-100 dark:bg-gray-800 p-1 rounded-2xl border border-stone-200 dark:border-gray-700 self-start sm:self-auto">
+                                <button
+                                    type="button"
+                                    onClick={() => setLeaderboardCriteria('overall')}
+                                    className={`px-3.5 py-1.5 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 ${
+                                        leaderboardCriteria === 'overall'
+                                            ? 'bg-white dark:bg-dark-card text-black dark:text-white shadow-sm border border-stone-200 dark:border-gray-700'
+                                            : 'text-stone-500 hover:text-black dark:hover:text-white'
+                                    }`}
+                                >
+                                    <Globe className="w-3.5 h-3.5" /> Overall
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => setLeaderboardCriteria('domain')}
+                                    className={`px-3.5 py-1.5 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 ${
+                                        leaderboardCriteria === 'domain'
+                                            ? 'bg-white dark:bg-dark-card text-black dark:text-white shadow-sm border border-stone-200 dark:border-gray-700'
+                                            : 'text-stone-500 hover:text-black dark:hover:text-white'
+                                    }`}
+                                >
+                                    <Target className="w-3.5 h-3.5 text-orange-500" /> By Domain
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* Domain Filter Pills (When 'domain' criteria is active) */}
+                        {leaderboardCriteria === 'domain' && (
+                            <div className="mb-6">
+                                <label className="block text-[11px] font-black uppercase text-stone-400 dark:text-gray-500 mb-2">
+                                    Specialized Domain:
+                                </label>
+                                <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none">
+                                    {(leaderboardData.available_domains?.length > 0 ? leaderboardData.available_domains : [
+                                        "Frontend Development",
+                                        "Backend Development",
+                                        "Full Stack Development",
+                                        "Mobile App Development",
+                                        "AI / Machine Learning & Data Science",
+                                        "DevOps & Cloud Engineering",
+                                        "UI/UX Design & Product",
+                                        "Cybersecurity"
+                                    ]).map((dom) => (
+                                        <button
+                                            key={dom}
+                                            type="button"
+                                            onClick={() => setLeaderboardDomain(dom)}
+                                            className={`px-3 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition-all border ${
+                                                leaderboardDomain === dom
+                                                    ? 'bg-orange-500 text-white border-black dark:border-orange-400 shadow-sm'
+                                                    : 'bg-stone-50 dark:bg-gray-800 text-stone-700 dark:text-gray-300 border-stone-200 dark:border-gray-700 hover:border-black dark:hover:border-gray-500'
+                                            }`}
+                                        >
+                                            {dom}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+
+                        {/* User Standing Banner */}
+                        {leaderboardData.my_stats && (
+                            <div className="mb-6 p-4 rounded-2xl bg-gradient-to-r from-orange-50 to-amber-50 dark:from-orange-950/20 dark:to-amber-950/20 border-2 border-orange-400 dark:border-orange-500/50 flex flex-wrap items-center justify-between gap-3">
+                                <div className="flex items-center gap-3">
+                                    <span className="w-8 h-8 rounded-full bg-orange-500 text-white font-black text-xs flex items-center justify-center shadow">
+                                        #{leaderboardData.my_stats.rank}
+                                    </span>
+                                    <div>
+                                        <p className="text-xs font-black text-light-border dark:text-white">
+                                            Your Standing ({leaderboardCriteria === 'domain' ? leaderboardDomain : 'Overall Platform'})
+                                        </p>
+                                        <p className="text-[11px] text-stone-500 dark:text-gray-400 font-medium">
+                                            Log in daily and score high on assessments to rise on the leaderboard!
+                                        </p>
+                                    </div>
+                                </div>
+                                <div className="flex items-center gap-2.5 text-xs font-black">
+                                    <span className="px-2.5 py-1 rounded-full bg-white dark:bg-gray-800 border border-stone-200 dark:border-gray-700 text-orange-500 flex items-center gap-1">
+                                        <Flame className="w-3.5 h-3.5 fill-orange-500" /> {leaderboardData.my_stats.streak || profile?.streak || 1}d Streak
+                                    </span>
+                                    <span className="px-2.5 py-1 rounded-full bg-purple-100 dark:bg-purple-950/70 border border-purple-300 dark:border-purple-800 text-purple-700 dark:text-purple-300 flex items-center gap-1">
+                                        <Zap className="w-3.5 h-3.5 fill-purple-500" /> {leaderboardData.my_stats.points || profile?.points || 0} XP
+                                    </span>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Top 3 Spotlight Podium */}
+                        {leaderboardData.rankings?.length >= 3 && (
+                            <div className="grid grid-cols-3 gap-3 mb-6 items-end">
+                                {/* 2nd Place (Silver) */}
+                                {leaderboardData.rankings[1] && (
+                                    <div className="bg-stone-50 dark:bg-gray-800/80 rounded-2xl p-4 text-center border-2 border-stone-300 dark:border-gray-700 relative">
+                                        <div className="w-7 h-7 mx-auto rounded-full bg-stone-300 text-black font-black text-xs flex items-center justify-center mb-2 shadow">
+                                            2
+                                        </div>
+                                        <div className="w-10 h-10 mx-auto rounded-full bg-stone-200 dark:bg-gray-700 font-black text-sm flex items-center justify-center text-stone-800 dark:text-white mb-1.5">
+                                            {leaderboardData.rankings[1].avatar_initial}
+                                        </div>
+                                        <h4 className="text-xs font-black truncate max-w-full">
+                                            {leaderboardData.rankings[1].full_name}
+                                        </h4>
+                                        <p className="text-[10px] text-stone-500 dark:text-gray-400 truncate">
+                                            {leaderboardData.rankings[1].domain}
+                                        </p>
+                                        <div className="mt-2 text-xs font-black text-purple-600 dark:text-purple-400">
+                                            {leaderboardData.rankings[1].points} XP
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* 1st Place (Gold) - Elevated */}
+                                {leaderboardData.rankings[0] && (
+                                    <div className="bg-gradient-to-b from-amber-100 to-amber-50 dark:from-amber-950/40 dark:to-gray-800 rounded-2xl p-4 text-center border-2 border-amber-400 shadow-[0_4px_12px_rgba(245,158,11,0.2)] relative -translate-y-2">
+                                        <div className="absolute -top-3 left-1/2 -translate-x-1/2 text-amber-500">
+                                            <Crown className="w-6 h-6 fill-amber-400 text-amber-500 animate-bounce" />
+                                        </div>
+                                        <div className="w-8 h-8 mx-auto rounded-full bg-amber-400 text-black font-black text-xs flex items-center justify-center mb-2 shadow mt-1">
+                                            1
+                                        </div>
+                                        <div className="w-12 h-12 mx-auto rounded-full bg-amber-200 dark:bg-amber-900/60 font-black text-base flex items-center justify-center text-amber-900 dark:text-amber-200 mb-1.5 shadow-sm">
+                                            {leaderboardData.rankings[0].avatar_initial}
+                                        </div>
+                                        <h4 className="text-sm font-black truncate max-w-full">
+                                            {leaderboardData.rankings[0].full_name}
+                                        </h4>
+                                        <p className="text-[10px] text-stone-500 dark:text-gray-400 truncate">
+                                            {leaderboardData.rankings[0].domain}
+                                        </p>
+                                        <div className="mt-2 text-sm font-black text-amber-600 dark:text-amber-400">
+                                            {leaderboardData.rankings[0].points} XP
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* 3rd Place (Bronze) */}
+                                {leaderboardData.rankings[2] && (
+                                    <div className="bg-stone-50 dark:bg-gray-800/80 rounded-2xl p-4 text-center border-2 border-amber-800/30 dark:border-amber-900/50 relative">
+                                        <div className="w-7 h-7 mx-auto rounded-full bg-amber-700 text-white font-black text-xs flex items-center justify-center mb-2 shadow">
+                                            3
+                                        </div>
+                                        <div className="w-10 h-10 mx-auto rounded-full bg-stone-200 dark:bg-gray-700 font-black text-sm flex items-center justify-center text-stone-800 dark:text-white mb-1.5">
+                                            {leaderboardData.rankings[2].avatar_initial}
+                                        </div>
+                                        <h4 className="text-xs font-black truncate max-w-full">
+                                            {leaderboardData.rankings[2].full_name}
+                                        </h4>
+                                        <p className="text-[10px] text-stone-500 dark:text-gray-400 truncate">
+                                            {leaderboardData.rankings[2].domain}
+                                        </p>
+                                        <div className="mt-2 text-xs font-black text-purple-600 dark:text-purple-400">
+                                            {leaderboardData.rankings[2].points} XP
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        )}
+
+                        {/* Rankings List */}
+                        <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
+                            {leaderboardLoading ? (
+                                <p className="text-center py-6 text-xs text-stone-400">Updating rankings...</p>
+                            ) : leaderboardData.rankings?.length === 0 ? (
+                                <p className="text-center py-6 text-xs text-stone-400">No candidates have completed assessments in this domain yet. Be the first!</p>
+                            ) : (
+                                leaderboardData.rankings?.map((item) => (
+                                    <div
+                                        key={item.user_id}
+                                        className={`flex items-center justify-between p-3.5 rounded-2xl border-2 transition-all ${
+                                            item.is_current_user
+                                                ? 'bg-orange-50/70 dark:bg-orange-950/20 border-orange-500 shadow-sm'
+                                                : 'bg-stone-50/60 dark:bg-gray-800/50 border-stone-200 dark:border-gray-700 hover:border-black dark:hover:border-gray-500'
+                                        }`}
+                                    >
+                                        <div className="flex items-center gap-3">
+                                            <span className={`w-7 h-7 rounded-full font-black text-xs flex items-center justify-center ${
+                                                item.rank === 1
+                                                    ? 'bg-amber-400 text-black'
+                                                    : item.rank === 2
+                                                    ? 'bg-stone-300 text-black'
+                                                    : item.rank === 3
+                                                    ? 'bg-amber-700 text-white'
+                                                    : 'bg-stone-200 dark:bg-gray-700 text-stone-700 dark:text-gray-300'
+                                            }`}>
+                                                {item.rank}
+                                            </span>
+                                            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-stone-200 to-stone-300 dark:from-gray-700 dark:to-gray-800 flex items-center justify-center font-black text-xs text-stone-800 dark:text-white">
+                                                {item.avatar_initial}
+                                            </div>
+                                            <div>
+                                                <div className="flex items-center gap-1.5">
+                                                    <p className="font-bold text-sm leading-snug">
+                                                        {item.full_name}
+                                                    </p>
+                                                    {item.is_current_user && (
+                                                        <span className="px-1.5 py-0.5 rounded text-[9px] font-black uppercase bg-orange-500 text-white">
+                                                            You
+                                                        </span>
+                                                    )}
+                                                </div>
+                                                <p className="text-xs text-stone-500 dark:text-gray-400">
+                                                    {item.domain}
+                                                </p>
+                                            </div>
+                                        </div>
+
+                                        <div className="flex items-center gap-3 text-xs font-bold">
+                                            <span className="hidden sm:inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-white dark:bg-gray-800 border border-stone-200 dark:border-gray-700 text-orange-500 font-extrabold text-[11px]">
+                                                <Flame className="w-3 h-3 fill-orange-500" /> {item.streak}d
+                                            </span>
+                                            <span className="hidden sm:inline-block text-stone-600 dark:text-gray-300 font-extrabold text-xs">
+                                                {item.skill_score}%
+                                            </span>
+                                            <span className="px-3 py-1 rounded-full bg-purple-100 dark:bg-purple-950/70 border border-purple-200 dark:border-purple-800 text-purple-700 dark:text-purple-300 font-black text-xs">
+                                                {item.points} XP
+                                            </span>
+                                        </div>
+                                    </div>
+                                ))
+                            )}
+                        </div>
                     </div>
                 </div>
 

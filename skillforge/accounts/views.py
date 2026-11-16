@@ -63,6 +63,13 @@ class LoginAPI(APIView):
 
         user = serializer.validated_data["user"]
 
+        if user.role == "student" and hasattr(user, "student_profile"):
+            try:
+                from .streak_utils import update_student_streak
+                update_student_streak(user.student_profile)
+            except Exception:
+                pass
+
         return Response({
             "tokens": get_tokens(user),
             "role": user.role,
@@ -135,6 +142,11 @@ class ProfileAPI(APIView):
     def get(self, request):
         user = request.user
         if user.role == "student":
+            try:
+                from .streak_utils import update_student_streak
+                update_student_streak(user.student_profile)
+            except Exception:
+                pass
             serializer = StudentProfileSerializer(user.student_profile)
         elif user.role == "client":
             serializer = ClientProfileSerializer(user.client_profile)
