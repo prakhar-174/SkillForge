@@ -4,6 +4,21 @@ from rest_framework import status, permissions
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework.permissions import IsAuthenticated
 from verification.services import generate_partial_report
+import threading
+from django.db import close_old_connections
+
+def trigger_partial_report_async(user_id):
+    def _task():
+        close_old_connections()
+        try:
+            generate_partial_report(user_id)
+        except Exception:
+            pass
+        finally:
+            close_old_connections()
+
+    thread = threading.Thread(target=_task, daemon=True)
+    thread.start()
 
 
 from .serializers import (
@@ -62,12 +77,31 @@ class OnboardingAPI(APIView):
     def put(self, request):
         user = request.user
 
-        # prevent re-onboarding
+        # If already onboarded, gracefully update profile rather than throwing a blocking 400 error
         if user.onboarding_stage >= 2:
-            return Response(
-                {"error": "Onboarding already completed"},
-                status=400
-            )
+            if user.role == "student":
+                serializer = StudentProfileSerializer(
+                    user.student_profile,
+                    data=request.data,
+                    partial=True
+                )
+            elif user.role == "client":
+                serializer = ClientProfileSerializer(
+                    user.client_profile,
+                    data=request.data,
+                    partial=True
+                )
+            else:
+                return Response({"error": "Invalid role"}, status=400)
+
+            serializer.is_valid(raise_exception=True)
+            serializer.save()
+            trigger_partial_report_async(user.id)
+
+            return Response({
+                "message": "Profile updated successfully",
+                "profile": serializer.data
+            })
 
         if user.role == "student":
             serializer = StudentOnboardingSerializer(
@@ -86,7 +120,7 @@ class OnboardingAPI(APIView):
 
         serializer.is_valid(raise_exception=True)
         serializer.save()
-        generate_partial_report(user.id)
+        trigger_partial_report_async(user.id)
 
         user.onboarding_stage = 2
         user.verified = True
@@ -106,7 +140,9 @@ class ProfileAPI(APIView):
             serializer = ClientProfileSerializer(user.client_profile)
         else:
             return Response({"error": "Invalid role"}, status=400)
-        return Response(serializer.data)
+        data = dict(serializer.data)
+        data["onboarding_stage"] = user.onboarding_stage
+        return Response(data)
 class ProfileUpdateAPI(APIView):
     permission_classes = [IsAuthenticated]
     def patch(self, request):
@@ -127,7 +163,7 @@ class ProfileUpdateAPI(APIView):
             return Response({"error": "Invalid role"}, status=400)
         serializer.is_valid(raise_exception=True)
         serializer.save()
-        generate_partial_report(user.id)
+        trigger_partial_report_async(user.id)
 
 
         return Response({

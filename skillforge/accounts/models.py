@@ -65,6 +65,7 @@ class StudentProfile(models.Model):
     experience_level = models.CharField(max_length=100, blank=True)
 
     github_url = models.URLField(blank=True, null=True)
+    linkedin_url = models.URLField(blank=True, null=True)
     portfolio_links = models.TextField(blank=True)
 
     resume = models.FileField(upload_to="resumes/", blank=True, null=True)
