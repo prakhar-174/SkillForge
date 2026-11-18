@@ -26,7 +26,15 @@ import {
     Crown,
     Medal,
     Sparkles,
-    Globe
+    Globe,
+    Bell,
+    Calendar,
+    MessageSquare,
+    CheckCheck,
+    AlertCircle,
+    Clock,
+    Lightbulb,
+    PhoneCall
 } from 'lucide-react';
 import Button from '../../components/ui/Button';
 import { useNavigate } from 'react-router-dom';
@@ -40,6 +48,11 @@ const StudentDashboard = () => {
     const [myApplications, setMyApplications] = useState([]);
     const [isJobModalOpen, setIsJobModalOpen] = useState(false);
     const [applyingTo, setApplyingTo] = useState(null);
+
+    // Notifications state
+    const [notifications, setNotifications] = useState([]);
+    const [unreadCount, setUnreadCount] = useState(0);
+    const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
 
     // Leaderboard state
     const [leaderboardCriteria, setLeaderboardCriteria] = useState('overall');
@@ -109,9 +122,71 @@ const StudentDashboard = () => {
                 });
                 if (res.ok) setMyApplications(await res.json());
             } catch (e) { console.error(e); }
+
+            // Fetch Notifications
+            try {
+                const res = await fetch('http://localhost:8000/api/project/notifications/', {
+                    headers: { 'Authorization': `Bearer ${tokens.access}` }
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    setNotifications(data.notifications || []);
+                    setUnreadCount(data.unread_count || 0);
+                }
+            } catch (e) { console.error(e); }
         };
         fetchData();
     }, [tokens]);
+
+    const fetchNotifications = async () => {
+        if (!tokens?.access) return;
+        try {
+            const res = await fetch('http://localhost:8000/api/project/notifications/', {
+                headers: { 'Authorization': `Bearer ${tokens.access}` }
+            });
+            if (res.ok) {
+                const data = await res.json();
+                setNotifications(data.notifications || []);
+                setUnreadCount(data.unread_count || 0);
+            }
+        } catch (e) { console.error(e); }
+    };
+
+    const markAllNotificationsRead = async () => {
+        if (!tokens?.access) return;
+        try {
+            const res = await fetch('http://localhost:8000/api/project/notifications/read/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${tokens.access}`
+                },
+                body: JSON.stringify({})
+            });
+            if (res.ok) {
+                setUnreadCount(0);
+                setNotifications(prev => prev.map(n => ({ ...n, is_read: true })));
+            }
+        } catch (e) { console.error(e); }
+    };
+
+    const markSingleNotificationRead = async (notificationId) => {
+        if (!tokens?.access) return;
+        try {
+            const res = await fetch('http://localhost:8000/api/project/notifications/read/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${tokens.access}`
+                },
+                body: JSON.stringify({ notification_id: notificationId })
+            });
+            if (res.ok) {
+                setNotifications(prev => prev.map(n => n.id === notificationId ? { ...n, is_read: true } : n));
+                setUnreadCount(prev => Math.max(0, prev - 1));
+            }
+        } catch (e) { console.error(e); }
+    };
 
     // Fetch Leaderboard
     const fetchLeaderboard = async (criteria = leaderboardCriteria, domain = leaderboardDomain) => {
@@ -205,7 +280,22 @@ const StudentDashboard = () => {
                         Ready to forge your path today?
                     </p>
                 </div>
-                <div className="flex items-center gap-4 self-end sm:self-auto">
+                <div className="flex items-center gap-3 sm:gap-4 self-end sm:self-auto">
+                    {/* Notifications Button */}
+                    <button
+                        type="button"
+                        onClick={() => setIsNotificationsOpen(true)}
+                        className="relative p-2.5 rounded-2xl bg-white dark:bg-dark-card border-2 border-black dark:border-gray-700 shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] dark:shadow-none hover:-translate-y-0.5 active:translate-y-0 transition-all flex items-center justify-center text-stone-800 dark:text-stone-200"
+                        title="Notifications"
+                    >
+                        <Bell className="w-5 h-5" />
+                        {unreadCount > 0 && (
+                            <span className="absolute -top-2 -right-2 bg-rose-500 text-white font-black text-[10px] min-w-[20px] h-5 px-1 rounded-full flex items-center justify-center border-2 border-white dark:border-dark-canvas animate-bounce shadow">
+                                {unreadCount > 9 ? '9+' : unreadCount}
+                            </span>
+                        )}
+                    </button>
+
                     <ThemeToggle />
                     <Button
                         onClick={handleLogout}
@@ -731,16 +821,53 @@ const StudentDashboard = () => {
                     <div className="bg-white dark:bg-dark-card border-2 border-light-border dark:border-gray-700 rounded-[2.5rem] p-8">
                         <h3 className="text-xl font-black mb-4 flex items-center gap-2"><Briefcase className="w-5 h-5" /> My Applications</h3>
                         {myApplications.length > 0 ? (
-                            <div className="space-y-3 max-h-48 overflow-y-auto">
+                            <div className="space-y-3 max-h-64 overflow-y-auto pr-1">
                                 {myApplications.map((app, idx) => (
-                                    <div key={idx} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-xl">
-                                        <div>
-                                            <p className="font-bold text-sm">{app.job_title || `Job #${app.job}`}</p>
-                                            <p className="text-xs text-gray-500">{app.company_name || 'Company'}</p>
+                                    <div key={idx} className="p-3.5 bg-gray-50 dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700/80">
+                                        <div className="flex items-start justify-between gap-2">
+                                            <div>
+                                                <p className="font-bold text-sm text-black dark:text-white">{app.job_title || `Job #${app.job}`}</p>
+                                                <p className="text-xs text-gray-500 mt-0.5">{app.company_name || 'Company'}</p>
+                                            </div>
+                                            {app.status === 'interview' && (
+                                                <span className="text-xs font-black px-2.5 py-1 rounded-full bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700 flex items-center gap-1 shadow-sm">
+                                                    <Sparkles className="w-3 h-3 text-emerald-600" /> Interview Call
+                                                </span>
+                                            )}
+                                            {app.status === 'rejected' && (
+                                                <span className="text-xs font-black px-2.5 py-1 rounded-full bg-rose-100 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300 border border-rose-300 dark:border-rose-700 flex items-center gap-1 shadow-sm">
+                                                    <AlertCircle className="w-3 h-3 text-rose-600" /> Declined
+                                                </span>
+                                            )}
+                                            {app.status === 'accepted' && (
+                                                <span className="text-xs font-black px-2.5 py-1 rounded-full bg-blue-100 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border border-blue-300 dark:border-blue-700 flex items-center gap-1 shadow-sm">
+                                                    <CheckCircle className="w-3 h-3 text-blue-600" /> Accepted
+                                                </span>
+                                            )}
+                                            {(!app.status || app.status === 'pending') && (
+                                                <span className="text-xs font-black px-2.5 py-1 rounded-full bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border border-amber-300 dark:border-amber-700 flex items-center gap-1 shadow-sm">
+                                                    <Clock className="w-3 h-3 text-amber-600" /> Pending Review
+                                                </span>
+                                            )}
                                         </div>
-                                        <span className={`text-xs font-bold px-2 py-1 rounded-full ${app.status === 'pending' ? 'bg-yellow-100 text-yellow-700' : app.status === 'accepted' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
-                                            {app.status}
-                                        </span>
+
+                                        {/* Feedback Note from recruiter */}
+                                        {app.feedback_note && (
+                                            <div className="mt-2.5 p-2.5 rounded-xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800/60 text-[11px] text-amber-900 dark:text-amber-200">
+                                                <span className="font-bold flex items-center gap-1 mb-0.5 text-amber-700 dark:text-amber-400">
+                                                    <Lightbulb className="w-3.5 h-3.5 text-amber-600 flex-shrink-0" /> Recruiter Feedback:
+                                                </span>
+                                                <p className="italic">"{app.feedback_note}"</p>
+                                            </div>
+                                        )}
+                                        {app.interview_details && (
+                                            <div className="mt-2.5 p-2.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800/60 text-[11px] text-emerald-900 dark:text-emerald-200">
+                                                <span className="font-bold flex items-center gap-1 mb-0.5 text-emerald-700 dark:text-emerald-400">
+                                                    <Calendar className="w-3.5 h-3.5 text-emerald-600 flex-shrink-0" /> Interview Details:
+                                                </span>
+                                                <p className="font-medium">"{app.interview_details}"</p>
+                                            </div>
+                                        )}
                                     </div>
                                 ))}
                             </div>
@@ -806,6 +933,150 @@ const StudentDashboard = () => {
                                                 >
                                                     {applyingTo === job.id ? 'Applying...' : <><Send className="w-4 h-4" /> Apply Now</>}
                                                 </Button>
+                                            )}
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
+            {/* Notifications Modal / Drawer */}
+            <AnimatePresence>
+                {isNotificationsOpen && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+                        onClick={() => setIsNotificationsOpen(false)}
+                    >
+                        <motion.div
+                            initial={{ scale: 0.9, y: 20 }}
+                            animate={{ scale: 1, y: 0 }}
+                            exit={{ scale: 0.9, y: 20 }}
+                            className="bg-white dark:bg-dark-card rounded-[2.5rem] p-6 md:p-8 max-w-2xl w-full max-h-[85vh] overflow-y-auto border-2 border-black dark:border-gray-700 shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] dark:shadow-none"
+                            onClick={e => e.stopPropagation()}
+                        >
+                            <div className="flex items-center justify-between mb-6 pb-4 border-b border-stone-200 dark:border-gray-800">
+                                <div className="flex items-center gap-3">
+                                    <div className="w-11 h-11 rounded-2xl bg-orange-100 dark:bg-orange-950/60 text-orange-600 flex items-center justify-center font-bold">
+                                        <Bell className="w-5 h-5" />
+                                    </div>
+                                    <div>
+                                        <div className="flex items-center gap-2">
+                                            <h2 className="text-2xl font-black text-black dark:text-white">Notifications</h2>
+                                            {unreadCount > 0 && (
+                                                <span className="text-xs font-black bg-rose-500 text-white px-2.5 py-0.5 rounded-full shadow-sm">
+                                                    {unreadCount} new
+                                                </span>
+                                            )}
+                                        </div>
+                                        <p className="text-xs text-stone-500 dark:text-gray-400">
+                                            Updates on your job applications and recruiter decisions
+                                        </p>
+                                    </div>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    {unreadCount > 0 && (
+                                        <button
+                                            type="button"
+                                            onClick={markAllNotificationsRead}
+                                            className="text-xs font-bold text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1 px-2.5 py-1 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-950/40"
+                                        >
+                                            <CheckCheck className="w-4 h-4" /> Mark all read
+                                        </button>
+                                    )}
+                                    <button
+                                        onClick={() => setIsNotificationsOpen(false)}
+                                        className="p-2 hover:bg-stone-100 dark:hover:bg-gray-800 rounded-full transition-colors text-stone-500 hover:text-black dark:hover:text-white"
+                                    >
+                                        <X className="w-5 h-5" />
+                                    </button>
+                                </div>
+                            </div>
+
+                            {notifications.length === 0 ? (
+                                <div className="text-center py-16">
+                                    <Bell className="w-14 h-14 text-stone-300 dark:text-gray-600 mx-auto mb-3" />
+                                    <p className="text-base font-bold text-stone-700 dark:text-gray-300">All caught up!</p>
+                                    <p className="text-xs text-stone-400 dark:text-gray-500 mt-1">
+                                        When recruiters review your job applications, their interview calls and feedback will appear here.
+                                    </p>
+                                </div>
+                            ) : (
+                                <div className="space-y-4">
+                                    {notifications.map((n) => (
+                                        <div
+                                            key={n.id}
+                                            onClick={() => !n.is_read && markSingleNotificationRead(n.id)}
+                                            className={`p-5 rounded-2xl border-2 transition-all cursor-pointer ${
+                                                !n.is_read
+                                                    ? 'bg-amber-50/50 dark:bg-amber-950/20 border-orange-400 dark:border-orange-500/60 shadow-sm'
+                                                    : 'bg-stone-50/60 dark:bg-gray-800/40 border-stone-200 dark:border-gray-700'
+                                            }`}
+                                        >
+                                            <div className="flex items-start justify-between gap-3">
+                                                <div className="flex items-start gap-3">
+                                                    <div className={`w-10 h-10 rounded-2xl flex items-center justify-center flex-shrink-0 font-bold ${
+                                                        n.notification_type === 'interview'
+                                                            ? 'bg-emerald-100 dark:bg-emerald-950/70 text-emerald-600'
+                                                            : n.notification_type === 'rejected'
+                                                            ? 'bg-rose-100 dark:bg-rose-950/70 text-rose-600'
+                                                            : 'bg-blue-100 dark:bg-blue-950/70 text-blue-600'
+                                                    }`}>
+                                                        {n.notification_type === 'interview' ? (
+                                                            <Calendar className="w-5 h-5" />
+                                                        ) : n.notification_type === 'rejected' ? (
+                                                            <AlertCircle className="w-5 h-5" />
+                                                        ) : (
+                                                            <Bell className="w-5 h-5" />
+                                                        )}
+                                                    </div>
+                                                    <div>
+                                                        <div className="flex flex-wrap items-center gap-2">
+                                                            <h4 className="font-black text-sm text-black dark:text-white">
+                                                                {n.title}
+                                                            </h4>
+                                                            {!n.is_read && (
+                                                                <span className="w-2 h-2 rounded-full bg-rose-500 animate-pulse" />
+                                                            )}
+                                                        </div>
+                                                        <p className="text-xs text-stone-500 dark:text-gray-400 mt-0.5">
+                                                            <span className="font-bold text-stone-700 dark:text-gray-300">{n.company_name}</span> • {n.job_title}
+                                                        </p>
+                                                        <p className="text-xs text-stone-600 dark:text-gray-300 mt-2 leading-relaxed">
+                                                            {n.message}
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                                <span className="text-[10px] text-stone-400 dark:text-gray-500 whitespace-nowrap font-mono">
+                                                    {new Date(n.created_at).toLocaleDateString()}
+                                                </span>
+                                            </div>
+
+                                            {/* Feedback Note or Interview Details */}
+                                            {n.feedback_note && (
+                                                <div className={`mt-3 p-3.5 rounded-xl border text-xs leading-relaxed ${
+                                                    n.notification_type === 'rejected'
+                                                        ? 'bg-amber-100/70 dark:bg-amber-950/40 border-amber-300 dark:border-amber-800 text-amber-950 dark:text-amber-200'
+                                                        : 'bg-emerald-100/70 dark:bg-emerald-950/40 border-emerald-300 dark:border-emerald-800 text-emerald-950 dark:text-emerald-200'
+                                                }`}>
+                                                    <p className="font-black flex items-center gap-1.5 mb-1">
+                                                        {n.notification_type === 'rejected' ? (
+                                                            <>
+                                                                <Lightbulb className="w-4 h-4 text-amber-600 flex-shrink-0" /> Recruiter Feedback for Improvement:
+                                                            </>
+                                                        ) : (
+                                                            <>
+                                                                <Calendar className="w-4 h-4 text-emerald-600 flex-shrink-0" /> Interview Details & Instructions:
+                                                            </>
+                                                        )}
+                                                    </p>
+                                                    <p className="font-medium italic">"{n.feedback_note}"</p>
+                                                </div>
                                             )}
                                         </div>
                                     ))}
