@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import JobPost, JobApplication
+from .models import JobPost, JobApplication, StudentNotification
 from accounts.models import ClientProfile, StudentProfile
 
 
@@ -29,8 +29,20 @@ class JobApplicationSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = JobApplication
-        fields = ['id', 'job', 'job_title', 'company_name', 'status', 'applied_at']
-        read_only_fields = ['id', 'status', 'applied_at', 'job_title', 'company_name']
+        fields = [
+            'id', 'job', 'job_title', 'company_name', 'status',
+            'feedback_note', 'interview_details', 'applied_at', 'reviewed_at'
+        ]
+        read_only_fields = ['id', 'status', 'applied_at', 'reviewed_at', 'job_title', 'company_name']
+
+
+class StudentNotificationSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = StudentNotification
+        fields = [
+            'id', 'notification_type', 'title', 'message',
+            'feedback_note', 'company_name', 'job_title', 'is_read', 'created_at'
+        ]
 
 
 class ApplicantSerializer(serializers.ModelSerializer):

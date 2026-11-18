@@ -47,6 +47,7 @@ class JobPost(models.Model):
 class JobApplication(models.Model):
     STATUS_CHOICES = [
         ('pending', 'Pending'),
+        ('interview', 'Call for Interview'),
         ('accepted', 'Accepted'),
         ('rejected', 'Rejected'),
     ]
@@ -54,10 +55,39 @@ class JobApplication(models.Model):
     job = models.ForeignKey(JobPost, on_delete=models.CASCADE, related_name='applications')
     student = models.ForeignKey('accounts.StudentProfile', on_delete=models.CASCADE, related_name='job_applications')
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
+    feedback_note = models.TextField(blank=True, default='')
+    interview_details = models.TextField(blank=True, default='')
     applied_at = models.DateTimeField(auto_now_add=True)
+    reviewed_at = models.DateTimeField(null=True, blank=True)
 
     class Meta:
         unique_together = ('job', 'student')
 
     def __str__(self):
         return f"{self.student.user.email} -> {self.job.title}"
+
+
+class StudentNotification(models.Model):
+    NOTIFICATION_TYPES = [
+        ('interview', 'Call for Interview'),
+        ('rejected', 'Application Rejected'),
+        ('accepted', 'Application Accepted'),
+        ('general', 'General Notification'),
+    ]
+
+    student = models.ForeignKey('accounts.StudentProfile', on_delete=models.CASCADE, related_name='notifications')
+    application = models.ForeignKey(JobApplication, on_delete=models.CASCADE, null=True, blank=True, related_name='notifications')
+    notification_type = models.CharField(max_length=20, choices=NOTIFICATION_TYPES, default='general')
+    title = models.CharField(max_length=255)
+    message = models.TextField()
+    feedback_note = models.TextField(blank=True, default='')
+    company_name = models.CharField(max_length=255, blank=True, default='')
+    job_title = models.CharField(max_length=255, blank=True, default='')
+    is_read = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"{self.student.user.email} - {self.title}"
