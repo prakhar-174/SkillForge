@@ -1,5 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
+import { Link } from 'react-router-dom';
 import { Sparkles, Zap, Trophy, Target } from 'lucide-react';
 
 const LeftPanel = () => {
@@ -12,12 +13,12 @@ const LeftPanel = () => {
             </div>
 
             <div className="relative z-10">
-                <div className="flex items-center gap-3">
-                    <div className="p-3 bg-white/10 backdrop-blur-md rounded-2xl border border-white/10">
+                <Link to="/" className="flex items-center gap-3 group cursor-pointer w-fit">
+                    <div className="p-3 bg-white/10 backdrop-blur-md rounded-2xl border border-white/10 group-hover:scale-105 transition-transform">
                         <Sparkles className="w-8 h-8 text-white" />
                     </div>
-                    <span className="text-3xl font-black text-white tracking-tighter">SkillForge</span>
-                </div>
+                    <span className="text-3xl font-black text-white tracking-tighter group-hover:text-blue-300 transition-colors">SkillForge</span>
+                </Link>
             </div>
 
             <div className="relative z-10 flex flex-col gap-8">

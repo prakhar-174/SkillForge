@@ -3,6 +3,8 @@ import Card from '../ui/Card';
 import Badge from '../ui/Badge';
 import Button from '../ui/Button';
 import { motion } from 'framer-motion';
+import { Link } from 'react-router-dom';
+import { useAuthStore } from '../../store/authStore';
 
 const Gauge = ({ score }) => {
     const radius = 80;
@@ -63,8 +65,10 @@ const Gauge = ({ score }) => {
 };
 
 const SkillCIBIL = () => {
+    const { setAuthMode } = useAuthStore();
+
     return (
-        <section className="py-24 w-full bg-light-card/50 dark:bg-dark-card/30">
+        <section id="scoring" className="py-24 w-full bg-light-card/50 dark:bg-dark-card/30 scroll-mt-20">
             <div className="max-w-7xl mx-auto px-4 flex flex-col md:flex-row items-center gap-16">
 
                 {/* Text Content */}
@@ -91,7 +95,9 @@ const SkillCIBIL = () => {
                             Direct pass to interview rounds
                         </li>
                     </ul>
-                    <Button variant="primary">Check Your Score</Button>
+                    <Link to="/auth" onClick={() => setAuthMode('register')}>
+                        <Button variant="primary">Check Your Score</Button>
+                    </Link>
                 </div>
 
                 {/* Visual */}

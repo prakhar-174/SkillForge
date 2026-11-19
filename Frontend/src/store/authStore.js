@@ -25,6 +25,7 @@ export const useAuthStore = create((set, get) => ({
         email: '',
         password: '',
         confirmPassword: '',
+        termsAgreed: false,
         // Client specific
         phoneNumber: '',
         companyName: '',
@@ -83,9 +84,11 @@ export const useAuthStore = create((set, get) => ({
 
         // Prepare payload based on role
         const payload = {
-            email: formData.email,
+            email: formData.email.trim().toLowerCase(),
             password: formData.password,
             role: role,
+            full_name: formData.fullName ? formData.fullName.trim() : '',
+            company_name: formData.companyName ? formData.companyName.trim() : ''
         };
 
         try {
@@ -96,12 +99,22 @@ export const useAuthStore = create((set, get) => ({
             });
 
             if (!response.ok) {
-                const error = await response.json();
-                throw new Error(JSON.stringify(error));
+                const errorData = await response.json();
+                let errorMsg = 'Registration failed. Please check your entries.';
+                if (typeof errorData === 'object' && errorData !== null) {
+                    const firstKey = Object.keys(errorData)[0];
+                    const val = errorData[firstKey];
+                    if (Array.isArray(val) && val.length > 0) {
+                        errorMsg = val[0];
+                    } else if (typeof val === 'string') {
+                        errorMsg = val;
+                    }
+                }
+                throw new Error(errorMsg);
             }
 
             const data = await response.json();
-            const user = { email: formData.email, role: role, onboarding_stage: 0, name: formData.fullName };
+            const user = { email: payload.email, role: role, onboarding_stage: 0, name: formData.fullName };
 
             // Auto login after signup
             localStorage.setItem('tokens', JSON.stringify(data.tokens));

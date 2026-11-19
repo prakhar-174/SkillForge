@@ -4,11 +4,13 @@ import { Link } from 'react-router-dom';
 import { Sparkles } from 'lucide-react';
 import Button from '../ui/Button';
 import ThemeToggle from './ThemeToggle';
+import { useAuthStore } from '../../store/authStore';
 import { cn } from './Layout';
 
 const Navbar = () => {
     const [isOpen, setIsOpen] = useState(false);
     const [scrolled, setScrolled] = useState(false);
+    const { setAuthMode } = useAuthStore();
 
     useEffect(() => {
         const handleScroll = () => {
@@ -19,10 +21,10 @@ const Navbar = () => {
     }, []);
 
     const navLinks = [
-        { name: 'Features', href: '#' },
-        { name: 'Pricing', href: '#' },
-        { name: 'Success Stories', href: '#' },
-        { name: 'About', href: '#' },
+        { name: 'Features', href: '#features' },
+        { name: 'Skill CIBIL', href: '#scoring' },
+        { name: 'Success Stories', href: '#success-stories' },
+        { name: 'About', href: '#about' },
     ];
 
     return (
@@ -37,12 +39,12 @@ const Navbar = () => {
             >
                 <div className="max-w-7xl mx-auto flex items-center justify-between">
                     {/* Logo */}
-                    <div className="flex items-center gap-2 cursor-pointer group">
+                    <a href="#top" className="flex items-center gap-2 cursor-pointer group">
                         <Sparkles className="w-8 h-8 text-light-border dark:text-white group-hover:rotate-12 transition-transform" />
                         <span className="text-3xl font-black tracking-tighter text-light-border dark:text-white">
                             SkillForge
                         </span>
-                    </div>
+                    </a>
 
                     {/* Desktop Links */}
                     <div className="hidden md:flex items-center gap-8">
@@ -60,10 +62,14 @@ const Navbar = () => {
 
                     {/* Desktop Actions */}
                     <div className="hidden md:flex items-center gap-6">
-                        <Link to="/auth" className="font-bold text-lg hover:underline decoration-wavy decoration-orange-500 underline-offset-4">
+                        <Link
+                            to="/auth"
+                            onClick={() => setAuthMode('login')}
+                            className="font-bold text-lg hover:underline decoration-wavy decoration-orange-500 underline-offset-4"
+                        >
                             Sign In
                         </Link>
-                        <Link to="/auth">
+                        <Link to="/auth" onClick={() => setAuthMode('register')}>
                             <Button variant="primary" className="px-8 !bg-blue-500 !text-white !border-black dark:!border-white hover:!bg-blue-600 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] active:translate-y-[2px] active:shadow-none">
                                 Get Started
                             </Button>
@@ -139,12 +145,14 @@ const Navbar = () => {
                                 }}
                                 className="flex flex-col gap-4 mt-8"
                             >
-                                <Link to="/auth" onClick={() => setIsOpen(false)}>
+                                <Link to="/auth" onClick={() => { setIsOpen(false); setAuthMode('register'); }}>
                                     <Button className="bg-white text-black border-black text-2xl py-4 px-12 shadow-[6px_6px_0px_0px_rgba(0,0,0,1)]">
                                         Get Started
                                     </Button>
                                 </Link>
-                                <Link to="/auth" onClick={() => setIsOpen(false)} className="text-2xl font-bold text-white underline decoration-wavy">Sign In</Link>
+                                <Link to="/auth" onClick={() => { setIsOpen(false); setAuthMode('login'); }} className="text-2xl font-bold text-white underline decoration-wavy">
+                                    Sign In
+                                </Link>
                             </motion.div>
                         </div>
 
