@@ -1,13 +1,22 @@
 import React from 'react';
 import { motion } from 'framer-motion';
+import { Link } from 'react-router-dom';
 import Button from '../ui/Button';
 import Badge from '../ui/Badge';
 import Card from '../ui/Card';
+import { useAuthStore } from '../../store/authStore';
 import { ArrowRight, CheckCircle, BarChart3, Users, Activity } from 'lucide-react';
 
 const Hero = () => {
+    const { setAuthMode, setRole } = useAuthStore();
+
+    const handleStartVerification = () => {
+        setAuthMode('register');
+        setRole('student');
+    };
+
     return (
-        <section className="relative w-full max-w-7xl mx-auto pt-32 pb-32 flex flex-col items-center text-center px-4">
+        <section id="top" className="relative w-full max-w-7xl mx-auto pt-32 pb-32 flex flex-col items-center text-center px-4">
             {/* Background Elements */}
             <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none -z-10">
                 <div className="absolute top-10 left-[10%] w-64 h-64 bg-yellow-200/50 rounded-full blur-3xl mix-blend-multiply dark:mix-blend-color animate-blob" />
@@ -35,12 +44,16 @@ const Hero = () => {
                 </p>
 
                 <div className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4">
-                    <Button variant="primary" className="w-full sm:w-auto text-xl py-4">
-                        Start Verification <ArrowRight className="ml-2 w-6 h-6" />
-                    </Button>
-                    <Button variant="secondary" className="w-full sm:w-auto text-xl py-4">
-                        View Paths
-                    </Button>
+                    <Link to="/auth" onClick={handleStartVerification} className="w-full sm:w-auto">
+                        <Button variant="primary" className="w-full sm:w-auto text-xl py-4 flex items-center justify-center">
+                            Start Verification <ArrowRight className="ml-2 w-6 h-6" />
+                        </Button>
+                    </Link>
+                    <a href="#features" className="w-full sm:w-auto">
+                        <Button variant="secondary" className="w-full sm:w-auto text-xl py-4">
+                            View Paths
+                        </Button>
+                    </a>
                 </div>
             </motion.div>
 

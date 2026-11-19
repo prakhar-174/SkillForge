@@ -2,21 +2,22 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuthStore } from '../../store/authStore';
-import { ChevronRight, ChevronLeft, Check } from 'lucide-react';
+import { ChevronRight, ChevronLeft, Check, AlertCircle } from 'lucide-react';
 import Button from '../ui/Button';
 
 // Steps
 import Step1Role from './steps/Step1Role';
-import Step2BasicInfo from './steps/Step2BasicInfo';
+import Step2BasicInfo, { validateStep2 } from './steps/Step2BasicInfo';
 import Step3Details from './steps/Step3Details';
 import Step4Confirm from './steps/Step4Confirm';
 import SuccessState from './SuccessState';
 
 const RegisterWizard = () => {
-    const { step, nextStep, prevStep, role, setAuthMode, signup } = useAuthStore();
+    const { step, nextStep, prevStep, role, setAuthMode, signup, formData } = useAuthStore();
     const navigate = useNavigate();
     const [isSuccess, setIsSuccess] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
+    const [stepError, setStepError] = useState(null);
 
     // Step configuration
     const steps = [
@@ -37,10 +38,29 @@ const RegisterWizard = () => {
     }
 
     const handleNext = () => {
-        // Validation logic can go here
-        if (step === 1 && !role) return;
+        setStepError(null);
+
+        if (step === 1) {
+            if (!role) {
+                setStepError("Please select a path (Student or Recruiter) to continue.");
+                return;
+            }
+        }
+
+        if (step === 2) {
+            const errors = validateStep2(formData, role);
+            if (Object.keys(errors).length > 0) {
+                const firstErrorMessage = Object.values(errors)[0];
+                setStepError(firstErrorMessage);
+                return;
+            }
+        }
 
         if (step === 4) {
+            if (!formData.termsAgreed) {
+                setStepError("Please review and agree to the Terms of Service & Privacy Policy.");
+                return;
+            }
             handleComplete();
         } else {
             nextStep();
@@ -49,21 +69,20 @@ const RegisterWizard = () => {
 
     const handleComplete = async () => {
         setIsLoading(true);
+        setStepError(null);
         try {
             const user = await signup();
             setIsSuccess(true);
-            // Delay for success animation before redirect
             setTimeout(() => {
                 if (user.role === 'student') {
                     navigate('/student/dashboard');
                 } else if (user.role === 'client') {
                     navigate('/client/dashboard');
                 }
-            }, 2000);
+            }, 1800);
         } catch (error) {
-            console.error(error);
-            // Handle error (maybe show a toast or alert - simple alert for now)
-            alert('Registration failed: ' + error.message);
+            console.error('Registration failed:', error);
+            setStepError(error.message || 'Registration failed. Please verify your credentials and try again.');
             setIsLoading(false);
         }
     };
@@ -124,8 +143,20 @@ const RegisterWizard = () => {
                 </AnimatePresence>
             </div>
 
+            {/* Step Error Banner */}
+            {stepError && (
+                <motion.div
+                    initial={{ opacity: 0, y: -8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="mt-4 p-3.5 rounded-xl bg-rose-50 dark:bg-rose-950/40 border-2 border-rose-400 dark:border-rose-800 text-rose-700 dark:text-rose-300 text-xs font-bold flex items-center gap-2 shadow-sm"
+                >
+                    <AlertCircle className="w-4 h-4 text-rose-500 flex-shrink-0" />
+                    <span>{stepError}</span>
+                </motion.div>
+            )}
+
             {/* Navigation Actions */}
-            <div className="flex items-center justify-between mt-8 pt-6 border-t border-gray-100 dark:border-gray-800">
+            <div className="flex items-center justify-between mt-6 pt-6 border-t border-gray-100 dark:border-gray-800">
                 {step === 1 ? (
                     <button
                         onClick={() => setAuthMode('login')}
